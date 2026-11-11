@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="theme-color" content="#161411" />
+<title>紙妻｜陳宅詭夜</title>
+<link rel="stylesheet" href="style.css" />
+<script defer src="data/game-data.js"></script>
+<script defer src="app.js"></script>
+</head>
+<body>
+<div id="app">
+<header class="topbar">
+ <div class="brand"><span class="brand-icon">紙</span><div><strong>紙妻</strong><span>陳宅詭夜 · 免 Token 完整遊玩版</span></div></div>
+ <div class="topactions"><span id="chapterBadge" class="pill">準備中</span><button id="readerButton" class="quiet" type="button">我的劇本</button><button id="resetButton" class="quiet" type="button">重新開始</button></div>
+</header>
+<div class="layout">
+ <main class="play-area">
+  <div class="scene" id="scene">
+   <div class="scene-vignette"></div>
+   <div class="scene-top"><span id="sceneTag">清河縣 · 陳宅</span><span id="sceneProgress">序章</span></div>
+   <div class="portrait portrait-left" id="leftPortrait" aria-hidden="true"><div class="portrait-body"><div class="portrait-head"></div><div class="portrait-shoulder"></div></div><div class="portrait-label" id="leftName"></div></div>
+   <div class="portrait portrait-right" id="rightPortrait" aria-hidden="true"><div class="portrait-body"><div class="portrait-head"></div><div class="portrait-shoulder"></div></div><div class="portrait-label" id="rightName"></div></div>
+   <div class="scene-center" id="sceneCenter"><span class="scene-ornament">❖</span><h1>紙妻</h1><p>霧鎖陳宅，真相從未沉睡</p></div>
+   <section class="dialogue" id="dialogue" aria-live="polite" hidden>
+    <div class="speaker" id="speaker">旁白</div><p id="dialogueText"></p><button id="advanceDialogue" class="next" type="button">點擊繼續 <span>▸</span></button>
+   </section>
+  </div>
+  <section class="control-panel">
+   <div class="eyebrow" id="sectionKicker">歡迎來到陳宅</div>
+   <h2 id="sectionTitle">選擇你的角色</h2>
+   <p id="sectionDesc" class="section-desc"></p>
+   <div class="options" id="options"></div>
+   <div class="aux" id="aux"></div>
+  </section>
+ </main>
+ <aside class="sidebar" aria-label="遊戲紀錄">
+  <div class="side-head"><div><div class="eyebrow">調查手冊</div><h3>公開情報</h3></div><span id="clueCount" class="count">0 張</span></div>
+  <div class="side-tabs"><button id="tabClue" type="button" class="active">提示卡</button><button id="tabTalk" type="button">公開問答</button><button id="tabNote" type="button">我的筆記</button></div>
+  <div id="sideContent" class="side-content"><p class="empty">隨遊戲推進，已取得的線索才會出現在此。</p></div>
+  <footer class="side-foot">所有已獲得的情報會保存在此瀏覽器。請勿在網頁原始碼查看後幕內容，以免劇透。</footer>
+ </aside>
+</div>
+<div class="overlay" id="readerOverlay" hidden><div class="reader" role="dialog" aria-modal="true" aria-labelledby="readerTitle"><header class="reader-header"><div><div class="eyebrow" id="readerKicker">角色劇本</div><h2 id="readerTitle">請閱讀本幕劇本</h2></div><button id="closeReader" type="button" class="quiet">關閉</button></header><div id="readerContent" class="reader-content"></div><footer class="reader-footer"><span id="readerFooterText">未解鎖的幕次不會在此顯示。</span><button id="readerDone" type="button" class="primary">我已讀完，進入下一階段</button></footer></div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+</div>
+</body>
+</html>
