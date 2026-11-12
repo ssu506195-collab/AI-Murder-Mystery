@@ -4,7 +4,7 @@ const D = window.PAPERWIFE_DATA;
 const V = window.PAPERWIFE_VISUALS || {portraits:{},labels:{},caseCatalog:[]};
 if (!D) throw new Error('未載入遊戲資料：請確認 data/game-data.js 已上傳。');
 const $ = id => document.getElementById(id);
-const STORE = 'paperwife_v6_notoken_save'; // V6 進度保留，V6.1 不覆寫舊存檔。
+const STORE = 'paperwife_v6_notoken_save'; // 延用既有存檔；V6.2 增加公開與持有線索分離。
 const ordered = D.roles;
 let state = load();
 let queue = [];
@@ -14,6 +14,8 @@ let activeClue = null;
 let sideTab = 'clues';
 let typing = false;
 let typeTimer = null;
+let autoTimer = null;
+let autoDialogue = false;
 let currentLine = '';
 let frontView = 'home';
 let selectedRole = D.roles[0];
@@ -89,8 +91,8 @@ function beginPrologue(){
  speak(lines,()=>{setPhase('read');openReader(true);});
 }
 
-function newState(){return {player:null,act:1,phase:'start',readActs:[],interviewed:[],interviewTarget:null,questionPath:[],publicLog:[],drawn:[],owned:[],searchStage:null,playerDraws:0,playerAreas:[],aiDrawsDone:false,notes:'',solutions:{},votes:{},result:null,complete:false};}
-function load(){try{const s=JSON.parse(localStorage.getItem(STORE));if(s && typeof s==='object' && (s.phase==='start'||ordered.includes(s.player)) && Number.isInteger(s.act)&&s.act>=1&&s.act<=4)return {...newState(),...s};}catch{}return newState();}
+function newState(){return {player:null,act:1,phase:'start',readActs:[],interviewed:[],interviewTarget:null,questionPath:[],publicLog:[],drawn:[],owned:[],publicClues:[],npcSharedRounds:[],searchStage:null,playerDraws:0,playerAreas:[],aiDrawsDone:false,notes:'',solutions:{},votes:{},result:null,complete:false};}
+function load(){try{const s=JSON.parse(localStorage.getItem(STORE));if(s && typeof s==='object' && (s.phase==='start'||ordered.includes(s.player)) && Number.isInteger(s.act)&&s.act>=1&&s.act<=4)return {...newState(),...s,publicClues:Array.isArray(s.publicClues)?s.publicClues:[],npcSharedRounds:Array.isArray(s.npcSharedRounds)?s.npcSharedRounds:[]};}catch{}return newState();}
 function save(){localStorage.setItem(STORE,JSON.stringify(state));}
 function setPhase(phase){state.phase=phase;save();render();}
 function el(tag,cls,txt){const x=document.createElement(tag);if(cls)x.className=cls;if(txt!==undefined)x.textContent=txt;return x;}
@@ -100,17 +102,17 @@ function setHeader(kicker,title,desc){$('sectionKicker').textContent=kicker;$('s
 function option(label,fn,{primary=false,sub=''}={}){const b=el('button','option'+(primary?' primary':''));b.type='button';b.append(document.createTextNode(label));if(sub)b.appendChild(el('small','',sub));b.addEventListener('click',fn);$('options').appendChild(b);return b;}
 function auxButton(label,fn){const b=el('button','',label);b.type='button';b.addEventListener('click',fn);$('aux').appendChild(b);return b;}
 function hideDialogue(){
- queue=[];queueDone=null;clearInterval(typeTimer);typeTimer=null;typing=false;
+ queue=[];queueDone=null;clearInterval(typeTimer);clearTimeout(autoTimer);autoTimer=null;typeTimer=null;typing=false;autoDialogue=false;
  document.body.classList.remove('has-dialogue');$('dialogue').hidden=true;
  $('sceneCenter').style.opacity='1';showPortraits();
 }
 function typeLine(text){
- clearInterval(typeTimer);currentLine=text;const node=$('dialogueText');node.textContent='';typing=true;
+ clearInterval(typeTimer);clearTimeout(autoTimer);autoTimer=null;currentLine=text;const node=$('dialogueText');node.textContent='';typing=true;
  const units=Array.from(text);let i=0;
  $('advanceDialogue').textContent='顯示完整文字 ▸';
  typeTimer=setInterval(()=>{i=Math.min(units.length,i+2);node.textContent=units.slice(0,i).join('');if(i>=units.length)finishTyping();},28);
 }
-function finishTyping(){if(!typing)return;clearInterval(typeTimer);typeTimer=null;typing=false;$('dialogueText').textContent=currentLine;$('advanceDialogue').textContent='下一段 ▸';}
+function finishTyping(){if(!typing)return;clearInterval(typeTimer);typeTimer=null;typing=false;$('dialogueText').textContent=currentLine;$('advanceDialogue').textContent=autoDialogue?'自動播放中…':'下一段 ▸';if(autoDialogue)autoTimer=setTimeout(showNext,880);}
 
 function showPortraits(left='',right='',who=''){
  const lp=$('leftPortrait'),rp=$('rightPortrait');
@@ -124,20 +126,21 @@ function showPortraits(left='',right='',who=''){
  }
  $('sceneCenter').style.opacity=(left||right)?'0':'1';
 }
-function speak(items,done){
- if(queue.length) return;queue=items.map(x=>({who:x.who,text:x.text,left:x.left||'',right:x.right||''}));queueDone=done||(()=>{});
+function speak(items,done,opts={}){
+ if(queue.length) return;autoDialogue=!!opts.auto;queue=items.map(x=>({who:x.who,text:x.text,left:x.left||'',right:x.right||''}));queueDone=done||(()=>{});
  document.body.classList.add('has-dialogue');showNext();
 }
 function showNext(){
+ clearTimeout(autoTimer);autoTimer=null;
  if(typing){finishTyping();return;}
  if(queue.length===0){const done=queueDone;hideDialogue();if(done)done();return;}
  const x=queue.shift();$('dialogue').hidden=false;$('speaker').textContent=x.who;typeLine(x.text);
  showPortraits(x.left||((x.who!=='旁白')?x.who:''),x.right||'',x.who);
  $('sceneProgress').textContent='點擊對話框逐句播放';
 }
-$('advanceDialogue').addEventListener('click',ev=>{ev.stopPropagation();showNext();});
-$('dialogue').addEventListener('click',showNext);
-window.addEventListener('keydown',ev=>{if((ev.key===' '||ev.key==='Enter')&&(queue.length||queueDone)&&document.activeElement?.tagName!=='TEXTAREA'){ev.preventDefault();showNext();}});
+$('advanceDialogue').addEventListener('click',ev=>{ev.stopPropagation();if(!autoDialogue)showNext();else if(typing)finishTyping();});
+$('dialogue').addEventListener('click',()=>{if(!autoDialogue)showNext();else if(typing)finishTyping();});
+window.addEventListener('keydown',ev=>{if((ev.key===' '||ev.key==='Enter')&&(queue.length||queueDone)&&!autoDialogue&&document.activeElement?.tagName!=='TEXTAREA'){ev.preventDefault();showNext();}});
 function logTalk(who,text,act=state.act){state.publicLog.push({who,text,act});save();renderSidebar();}
 function logLines(items){items.forEach(x=>logTalk(x.who,x.text));}
 function stageLabel(){const map={start:'準備',read:'劇本閱讀',ritual:'孔神婆儀式',interview:'人物問答',public:'公開討論',search1:'第一輪搜證',searchSecret:'密室搜證',solveSecret:'密室推理',search2:'第二輪搜證',identity:'身分推理',vote:'最終投票',ending:'真相揭曉'};return map[state.phase]||state.phase;}
@@ -145,10 +148,10 @@ function updateHeader(){
  $('chapterBadge').textContent=state.phase==='start'?'尚未開始':`第 ${state.act} 幕・${stageLabel()}`;
  $('sceneTag').textContent=state.player?`${state.player} · 陳宅`:'清河縣 · 陳宅';
  if(!queue.length)$('sceneProgress').textContent=stageLabel();
- $('clueCount').textContent=`${state.drawn.length} 張`;
+ $('clueCount').textContent=`${(state.publicClues||[]).length} 張公開`;
  $('readerButton').disabled=!state.player;
 }
-function render(){updateHeader();if(queue.length)return;
+function render(){updateHeader();document.querySelector('.play-area').classList.toggle('choice-mode',state.phase==='interview'&&!!state.interviewTarget);if(queue.length)return;
  switch(state.phase){
  case 'start':return renderStart();
  case 'prologue':return renderPrologue();
@@ -209,7 +212,7 @@ function renderInterviewTree(){const target=state.interviewTarget;const path=sta
  setHeader(`第 ${state.act} 幕 · 詢問 ${target}`,labels[layer],`你正在詢問 ${target}，第 ${layer+1} 層／共 3 層。這組問答完成後才會計入本幕的兩名角色額度。`);
  items.forEach((item,i)=>option(item.q,()=>{
   const line=[{who:state.player,text:item.q,left:state.player,right:target},{who:target,text:item.a,left:state.player,right:target}];
-  state.questionPath.push(i);save();speak(line,()=>{logLines(line);render();});
+  state.questionPath.push(i);save();speak(line,()=>{logLines(line);render();},{auto:true});
  }));
 }
 function renderPublic(){
@@ -259,7 +262,36 @@ function drawChoice(round,actor,index,localDraws,areas,seen){
  const c=rngPick(pool);
  return c;
 }
-function recordClue(c,owner){if(!c||state.drawn.includes(c.id))return;state.drawn.push(c.id);state.owned.push({id:c.id,owner,act:state.act});activeClue=c;save();renderSidebar();}
+function recordClue(c,owner){
+ if(!c||state.drawn.includes(c.id))return;
+ state.drawn.push(c.id);state.owned.push({id:c.id,owner,act:state.act});
+ // 組織手冊：公共線索必須公開；密室線索需於集體辨識屍塊時展示。
+ if(c.area==='公共'||c.area==='密室')publicize(c.id);
+ if(owner===state.player)activeClue=c;
+ save();renderSidebar();
+}
+function publicize(id){
+ if(!state.publicClues)state.publicClues=[];
+ if(!state.publicClues.includes(id))state.publicClues.push(id);
+ save();
+}
+function sharePlayerClue(id){
+ const own=state.owned.some(x=>x.id===id&&x.owner===state.player);
+ if(!own)return;publicize(id);renderSidebar();message('你已將這張私人線索分享給所有角色。');
+}
+function shareNpcClues(round){
+ // AI 不再把所有搜到的個人線索一次性公布。每輪只分享少量可討論的線索。
+ if(state.npcSharedRounds?.includes(round))return;
+ const candidates=state.owned.filter(x=>x.owner!==state.player&&D.clues.some(c=>c.id===x.id&&c.round===round&&c.area!=='公共'&&c.area!=='密室'));
+ const goal=round==='第一輪'?3:round==='第二輪'?4:0;
+ // 跨角色挑選，比將整批 6×配額全發出更接近實際分享。
+ const picked=[],areas=new Set();
+ for(const c of candidates){const clue=D.clues.find(y=>y.id===c.id);if(!areas.has(clue.area)&&picked.length<goal){picked.push(c.id);areas.add(clue.area);}}
+ for(const c of candidates){if(picked.length>=goal)break;if(!picked.includes(c.id))picked.push(c.id);}
+ picked.forEach(publicize);
+ state.npcSharedRounds.push(round);save();
+ return picked.length;
+}
 function drawOne(round){const index=state.playerDraws;
  const c=drawChoice(round,state.player,index,index,state.playerAreas,state.drawn);
  if(!c){message('這個分類的提示卡已抽完，請檢查資料配置。');return;}
@@ -277,7 +309,7 @@ function autoDraw(round){const total=round==='密室'?2:round==='第一輪'?3:5;
    if(c.area!=='公共'&&c.area!=='密室')areas.push(c.area);
   }
  }
- state.aiDrawsDone=true;save();message(`其他角色共公布 ${num} 張已抽出的提示卡。`);render();
+ const shown=shareNpcClues(round)||0;state.aiDrawsDone=true;save();message(`其他角色本輪搜得 ${num} 張提示卡，其中 ${shown} 張私人線索選擇公開；其餘保留在各自手中。`);render();
 }
 function renderSearch(round){
  const target=round==='密室'?2:round==='第一輪'?3:5;
@@ -286,11 +318,11 @@ function renderSearch(round){
  if(activeClue){const box=el('div','clue-reveal');box.appendChild(el('strong','','提示卡'));box.appendChild(el('p','',activeClue.text));$('aux').appendChild(box);}
  if(state.playerDraws<target){const category=round==='密室'?'密室':round==='第一輪'?(state.playerDraws===0?'公共':'人物'):(state.playerDraws<2?'公共':'人物');
   option(`抽取第 ${state.playerDraws+1} 張提示卡 · ${category}`,()=>drawOne(round),{primary:true,sub:'一次只抽取一張，抽到後才公開到旁邊的提示卡區'});
- }else if(!state.aiDrawsDone){option('觀看其他六位角色本輪抽出的公開線索',()=>autoDraw(round),{primary:true,sub:'其他角色同樣依照各自搜證配額抽取；抽到後才公開'});}
+ }else if(!state.aiDrawsDone){option('讓其他角色完成本輪搜證並交流線索',()=>autoDraw(round),{primary:true,sub:'他們會持有各自抽到的私人卡片，公共卡片必公開，其餘只擇要分享'});}
  else if(round==='密室'){option('開始密室屍塊身分推理',()=>{activeClue=null;setPhase('solveSecret');},{primary:true});}
  else if(round==='第一輪'){option('第一輪搜證結束，開始第二幕人物問答',()=>{activeClue=null;setPhase('interview');},{primary:true});}
  else option('第二輪搜證結束，進入身分推理',()=>{activeClue=null;setPhase('identity');},{primary:true});
- if(state.playerDraws===target&&state.aiDrawsDone)auxButton('查看全部已公開的提示卡',()=>{sideTab='clues';renderSidebar();});
+ if(state.playerDraws===target&&state.aiDrawsDone)auxButton('查看目前公開的提示卡及你的私人線索',()=>{sideTab='clues';renderSidebar();});
 }
 function renderSolveSecret(){setHeader('第三幕 · 密室推理','四具屍體，誰是最後一人？','密室中的十四條線索可指向四具不同的屍體；回想孔神婆先前附身時的話。');
  for(const answer of ['孔神婆','惠雯','秋萍','孟小婉'])option(answer,()=>{
@@ -335,16 +367,27 @@ function renderEnding(){setHeader('最終章 · 復盤','紙妻 · 真相揭曉'
  state.complete=true;save();
 }
 function renderSidebar(){
- $('clueCount').textContent=`${state.drawn.length} 張`;
+ $('clueCount').textContent=`${(state.publicClues||[]).length} 張公開`;
  for(const [id,kind] of [['tabClue','clues'],['tabTalk','talk'],['tabNote','note']])$(id).classList.toggle('active',sideTab===kind);
  const pane=$('sideContent');clear(pane);
  if(sideTab==='clues'){
-  if(!state.drawn.length)pane.appendChild(el('p','empty','還沒有抽到任何提示卡；第一幕不會發放線索。'));
-  else for(const x of state.owned.slice().reverse()){
-   const c=D.clues.find(c=>c.id===x.id);if(!c)continue;
-   const box=el('article','clue-box');box.appendChild(el('h4','',`提示卡・${String(c.id).padStart(2,'0')}｜${c.area}`));box.appendChild(el('p','',c.text));
-   box.appendChild(el('p','muted',`第 ${x.act} 幕 · ${x.owner} 搜證取得`));pane.appendChild(box);
+  const pub=(state.publicClues||[]).map(id=>D.clues.find(c=>c.id===id)).filter(Boolean);
+  pane.appendChild(el('h4','side-subtitle',`已公開的線索（${pub.length}）`));
+  if(!pub.length)pane.appendChild(el('p','empty','目前還沒有公開線索。第一幕不會發放提示卡。'));
+  for(const c of pub.slice().reverse()){
+   const box=el('article','clue-box');box.appendChild(el('h4','',`提示卡・${String(c.id).padStart(2,'0')}｜${c.area}`));box.appendChild(el('p','',c.text));pane.appendChild(box);
   }
+  const mine=state.owned.filter(x=>x.owner===state.player&&!(state.publicClues||[]).includes(x.id));
+  if(mine.length){
+   pane.appendChild(el('h4','side-subtitle',`我持有但尚未公開（${mine.length}）`));
+   for(const x of mine.slice().reverse()){
+    const c=D.clues.find(y=>y.id===x.id);if(!c)continue;
+    const box=el('article','clue-box private-clue');box.appendChild(el('h4','',`私人提示卡・${String(c.id).padStart(2,'0')}`));box.appendChild(el('p','',c.text));
+    const btn=el('button','share-clue','公開這張線索');btn.type='button';btn.addEventListener('click',()=>sharePlayerClue(c.id));box.appendChild(btn);pane.appendChild(box);
+   }
+  }
+  const held=state.owned.filter(x=>x.owner!==state.player&&!(state.publicClues||[]).includes(x.id)).length;
+  if(held)pane.appendChild(el('p','empty',`其他角色另有 ${held} 張未公開的個人線索，尚不能查看內容。`));
  }else if(sideTab==='talk'){
   if(!state.publicLog.length)pane.appendChild(el('p','empty','尚無公開問答。劇情對話會逐句顯示，播放後才寫入此處。'));
   else for(const x of state.publicLog.slice().reverse()){

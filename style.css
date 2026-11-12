@@ -60,3 +60,19 @@ body{background:#100d0c}
 @media (max-width:1080px){.role-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.role-portrait{height:270px}.case-card{grid-template-columns:minmax(230px,45%) 1fr}.portrait{width:46%}}
 @media (max-width:760px){.front-inner{padding:24px}.front-home{background-position:59% top}.front-home .front-inner{align-items:flex-end}.front-copy{padding:90px 0 26px}.front-headline{font-size:clamp(38px,9vw,56px)}.case-card{grid-template-columns:1fr}.case-cover{height:220px}.role-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.role-portrait{height:260px}.front-section-title{font-size:34px}.scene{min-height:430px;height:62vh}.portrait{bottom:44px;height:68%;width:49%}.portrait-left{left:0}.portrait-right{right:0}.dialogue{left:2%;right:2%;min-height:134px;padding:14px 17px}.dialogue p{font-size:14px}.role-bottom .gold-button{min-width:0;width:100%}}
 @media (prefers-reduced-motion:reduce){.front-button,.role-card,.portrait{transition:none}}
+
+/* V6.2: keep both portraits visible during the choice between each question and followup. */
+.play-area{position:relative}
+.play-area.choice-mode .scene-center{opacity:0!important}
+.play-area.choice-mode .scene{min-height:610px;height:min(78vh,830px)}
+.play-area.choice-mode .control-panel{position:relative;z-index:5;margin:-214px 3% 24px;padding:17px 20px 23px;min-height:0;border:1px solid #a88959;background:linear-gradient(105deg,#100c0de9,#1b1715f1);box-shadow:0 12px 55px #000a;border-radius:3px}
+.play-area.choice-mode .control-panel h2{font-size:21px;margin:4px 0}
+.play-area.choice-mode .control-panel .section-desc{font-size:12px;margin-bottom:10px}
+.play-area.choice-mode .options{max-height:180px;overflow:auto;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.play-area.choice-mode .option{font-size:13px;padding:10px;min-height:53px}
+.play-area.choice-mode .portrait{height:83%}
+body.has-dialogue .play-area.choice-mode .control-panel{pointer-events:none;opacity:0}
+.private-clue{border-style:dashed;border-color:#9a7a50;background:#242019}
+.share-clue{font-size:12px;margin-top:10px;border:1px solid #bd985b;color:#f8e3b6;background:#4e3a21;padding:7px 12px}
+.side-subtitle{font-size:13px;letter-spacing:.07em;color:#d7b47e;margin:16px 0 10px}
+@media(max-width:850px){.play-area.choice-mode .options{grid-template-columns:1fr;max-height:180px}.play-area.choice-mode .control-panel{margin-top:-220px}.play-area.choice-mode .scene{height:75vh}}
