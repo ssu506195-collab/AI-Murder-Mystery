@@ -1,5 +1,5 @@
 'use strict';
-/* 紙妻｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
+/* 紙妻 V6.4｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
 const D = window.PAPERWIFE_DATA;
 const V = window.PAPERWIFE_VISUALS || {portraits:{},labels:{},caseCatalog:[]};
 if (!D) throw new Error('未載入遊戲資料：請確認 data/game-data.js 已上傳。');
@@ -16,6 +16,7 @@ let typing = false;
 let typeTimer = null;
 let autoTimer = null;
 let autoDialogue = false;
+let autoHoldLast = false;
 let currentLine = '';
 let frontView = 'home';
 let selectedRole = D.roles[0];
@@ -24,6 +25,15 @@ let openingIndex = 0;
 function frontButton(label, fn, cls=''){
  const b=el('button','front-button '+cls,label);b.type='button';b.addEventListener('click',fn);return b;
 }
+const CAST_INTROS={
+ '陳聿明':{role:'陳宅主人',meta:'PUBLIC INTRODUCTION',desc:'陳家大宅的主人，平日深居簡出，性情嚴肅。宅內所有安排與明日婚禮，都由他拍板定奪。',quote:'明日是我與孟小婉的大喜之日。今晚宅內若有任何需要，儘管來找我。'},
+ '東青':{role:'陳宅管家',meta:'FIXED CHARACTER · PUBLIC INTRODUCTION',desc:'年輕管家，負責陳宅日常管理、賓客接待與婚禮安排，對宅中大小事務最熟。',quote:'我是東青，負責陳宅的日常事務。近來宅中怪事頻出，若各位有需要，可以找我；只是不少房間已經閒置多年，還請不要擅自進入。'},
+ '阿忠':{role:'花園園丁',meta:'PUBLIC INTRODUCTION',desc:'長年住在花園角落，沉默寡言，總戴著寬檐草帽，負責照看院中花木與後院雜務。',quote:'我平時只管花園和後院，不愛多話。若你們半夜聽見什麼動靜，也未必真是風。'},
+ '戴思齊':{role:'私人醫生',meta:'PUBLIC INTRODUCTION',desc:'來自上海的西醫，每月定期為陳聿明看診，談吐斯文，對外界局勢與醫學都頗有見解。',quote:'我是戴思齊，這次來是例行問診，也順便為陳先生的婚禮道賀。若有人身體不適，可以來找我。'},
+ '孟小婉':{role:'待嫁新娘',meta:'PUBLIC INTRODUCTION',desc:'即將嫁入陳宅的年輕女子，外表溫婉柔弱，近日卻因宅中的怪事顯得心神不寧。',quote:'我是孟小婉。承蒙陳先生照顧，才有了今日這門婚事……只是這幾晚我總覺得，走廊盡頭像有人在看著我。'},
+ '紅豆':{role:'陳宅女傭',meta:'PUBLIC INTRODUCTION',desc:'負責廚房與日常雜務的少女，表面活潑勤快，對宅中角落與僕役往來最為熟悉。',quote:'我叫紅豆，平時就在宅裡做飯、打掃、跑腿。若各位有什麼要拿要送的，吩咐我就行。'},
+ '江靜儀':{role:'《滬上日報》記者',meta:'PUBLIC INTRODUCTION',desc:'自上海而來的女記者，以採訪陳家寨舊案為由來到陳宅，說話俐落，觀察敏銳。',quote:'我是江靜儀，《滬上日報》的記者。這次來，一是參加婚禮，二是想了解當年陳家寨瘟疫的真相。'}
+};
 function frontSection(view){
  frontView=view;
  const f=$('frontScreen');
@@ -31,15 +41,16 @@ function frontSection(view){
  hideDialogue();
  f.hidden=false;$('app').hidden=true;
  const pane=$('frontInner');clear(pane);
- const background=$('frontHero');background.className='front-hero '+(view==='home'?'front-home':'front-interior');
+ const background=$('frontHero');background.className='front-hero';
+ background.classList.add(view==='home'?'front-home':view==='cases'?'front-case':'front-role');
  if(view==='home')renderHome(pane);else if(view==='cases')renderCases(pane);else if(view==='roles')renderRoleSelect(pane);
 }
 function renderHome(pane){
  const box=el('div','front-copy');
- box.append(el('div','front-eyebrow','A STORY BUILT ON SECRETS'));
- box.append(el('h1','front-headline','每個人都有秘密。'));
- box.append(el('h1','front-headline gold-line','但只有一個真相。'));
- box.append(el('p','front-summary','民國江南，長鹽山下的陳宅深夜。七位角色各懷秘密，婚禮、怪談與疑案交錯。你將成為其中一人，親自揭開埋藏多年的真相。'));
+ box.append(el('div','front-eyebrow','IMMERSIVE MYSTERY ROLEPLAY'));
+ box.append(el('h1','front-headline','穿越進入故事。'));
+ box.append(el('h1','front-headline gold-line','親手找出真相。'));
+ box.append(el('p','front-summary','這不是單純閱讀故事，而是一場你親自參與的劇本殺。進入案件後，你將成為故事中的其中一人，透過序章、角色自我介紹、公開問答、搜證與推理，一步步找出兇手、還原動機，並揭開被埋藏多年的真相。'));
  const buttons=el('div','front-actions');
  buttons.append(frontButton('選擇劇本',()=>frontSection('cases'),'gold-button'));
  if(state.player){buttons.append(frontButton('繼續上次進度',()=>{frontSection('play');render();},'outline-button'));}
@@ -48,11 +59,11 @@ function renderHome(pane){
 }
 function renderCases(pane){
  pane.append(frontButton('← 返回首頁',()=>frontSection('home'),'text-button'));
- const area=el('section','case-library');area.append(el('div','front-eyebrow','CHOOSE YOUR CASE'));area.append(el('h2','front-section-title','選擇劇本'));area.append(el('p','front-muted','先選擇要體驗的故事，再決定扮演哪位角色。日後新增劇本可以擴充這份列表。'));
+ const area=el('section','case-library');area.append(el('div','front-eyebrow','CHOOSE YOUR CASE'));area.append(el('h2','front-section-title','選擇劇本'));area.append(el('p','front-muted','先選擇要體驗的故事，再決定扮演哪位角色。劇本卡片下方只保留玩家最在意的資訊：故事簡介、角色人數與預估遊玩時間。'));
  for(const c of V.caseCatalog){
   const card=el('article','case-card');
   const cover=el('img','case-cover');cover.src=c.cover;cover.alt=c.title+' 劇本封面';card.append(cover);
-  const info=el('div','case-info');info.append(el('div','front-eyebrow',c.category));info.append(el('h3','',c.title));info.append(el('p','',c.subtitle));info.append(el('p','case-spec','七位角色　·　四幕故事　·　87 張提示卡'));
+  const info=el('div','case-info');info.append(el('div','front-eyebrow',c.category));info.append(el('h3','',c.title));info.append(el('p','',c.subtitle));info.append(el('p','case-spec',`${c.players||'7 人劇本'}　·　${c.duration||'約 4–6 小時'}`));
   info.append(frontButton('進入劇本 →',()=>{if(c.available)frontSection('roles');},'gold-button'));card.append(info);area.append(card);
  }
  pane.append(area);
@@ -60,7 +71,7 @@ function renderCases(pane){
 function renderRoleSelect(pane){
  clear(pane);
  pane.append(frontButton('← 返回劇本選擇',()=>frontSection('cases'),'text-button'));
- const area=el('section','role-library');area.append(el('div','front-eyebrow','YOUR SECRET IDENTITY'));area.append(el('h2','front-section-title','決定你的角色'));area.append(el('p','front-muted','你將扮演七位來客中的一人。每位角色都藏著不同的回憶與秘密，遊戲會按幕逐步揭露。'));
+ const area=el('section','role-library');area.append(el('div','front-eyebrow','YOUR SECRET IDENTITY'));area.append(el('h2','front-section-title','決定你的角色'));area.append(el('p','front-muted','你將扮演七位角色中的一人。確認身分後，會先進入「在場人物」自我介紹，再正式開始序章與後續調查。'));
  const modes=el('div','role-modes');
  const choose=frontButton('◉ 自行選擇',()=>{randomRoleMode=false;renderRoleSelect(pane);},!randomRoleMode?'mode-current':'');
  const random=frontButton('◯ 隨機抽取',()=>{randomRoleMode=true;renderRoleSelect(pane);},randomRoleMode?'mode-current':'');
@@ -75,11 +86,10 @@ function renderRoleSelect(pane){
  const footer=el('div','role-bottom');footer.append(frontButton(randomRoleMode?'抽取我的角色':'確認選擇，進入故事',()=>{
   const role=randomRoleMode?D.roles[Math.floor(Math.random()*D.roles.length)]:selectedRole;
   if(!confirm('確定開始扮演「'+role+'」嗎？此操作會覆蓋目前的遊戲進度。'))return;
-  state=newState();state.player=role;state.phase='prologue';save();frontSection('play');render();beginPrologue();
+  state=newState();state.player=role;state.phase='cast';state.castIndex=0;save();frontSection('play');render();
  },'gold-button'));area.append(footer);pane.append(area);
 }
 function beginPrologue(){
- // 劇本序章文字取自現有繁體文字資料；每一段獨立播放，並以打字方式呈現。
  const narrative=D.intro.replace(/\r/g,'').split(/(?<=[。！？])|\n+/).map(x=>x.trim()).filter(Boolean);
  const merged=[];
  for(const sentence of narrative){
@@ -91,7 +101,7 @@ function beginPrologue(){
  speak(lines,()=>{setPhase('read');openReader(true);});
 }
 
-function newState(){return {player:null,act:1,phase:'start',readActs:[],interviewed:[],interviewTarget:null,questionPath:[],publicLog:[],drawn:[],owned:[],publicClues:[],npcSharedRounds:[],searchStage:null,playerDraws:0,playerAreas:[],aiDrawsDone:false,notes:'',solutions:{},votes:{},result:null,complete:false};}
+function newState(){return {player:null,act:1,phase:'start',castIndex:0,readActs:[],interviewed:[],interviewTarget:null,questionPath:[],publicLog:[],drawn:[],owned:[],publicClues:[],npcSharedRounds:[],searchStage:null,playerDraws:0,playerAreas:[],aiDrawsDone:false,notes:'',solutions:{},votes:{},result:null,complete:false};}
 function load(){try{const s=JSON.parse(localStorage.getItem(STORE));if(s && typeof s==='object' && (s.phase==='start'||ordered.includes(s.player)) && Number.isInteger(s.act)&&s.act>=1&&s.act<=4)return {...newState(),...s,publicClues:Array.isArray(s.publicClues)?s.publicClues:[],npcSharedRounds:Array.isArray(s.npcSharedRounds)?s.npcSharedRounds:[]};}catch{}return newState();}
 function save(){localStorage.setItem(STORE,JSON.stringify(state));}
 function setPhase(phase){state.phase=phase;save();render();}
@@ -102,9 +112,9 @@ function setHeader(kicker,title,desc){$('sectionKicker').textContent=kicker;$('s
 function option(label,fn,{primary=false,sub=''}={}){const b=el('button','option'+(primary?' primary':''));b.type='button';b.append(document.createTextNode(label));if(sub)b.appendChild(el('small','',sub));b.addEventListener('click',fn);$('options').appendChild(b);return b;}
 function auxButton(label,fn){const b=el('button','',label);b.type='button';b.addEventListener('click',fn);$('aux').appendChild(b);return b;}
 function hideDialogue(){
- queue=[];queueDone=null;clearInterval(typeTimer);clearTimeout(autoTimer);autoTimer=null;typeTimer=null;typing=false;autoDialogue=false;
+ queue=[];queueDone=null;clearInterval(typeTimer);clearTimeout(autoTimer);autoTimer=null;typeTimer=null;typing=false;autoDialogue=false;autoHoldLast=false;
  document.body.classList.remove('has-dialogue');$('dialogue').hidden=true;
- $('sceneCenter').style.opacity='1';showPortraits();
+ showPortraits();
 }
 function typeLine(text){
  clearInterval(typeTimer);clearTimeout(autoTimer);autoTimer=null;currentLine=text;const node=$('dialogueText');node.textContent='';typing=true;
@@ -112,30 +122,45 @@ function typeLine(text){
  $('advanceDialogue').textContent='顯示完整文字 ▸';
  typeTimer=setInterval(()=>{i=Math.min(units.length,i+2);node.textContent=units.slice(0,i).join('');if(i>=units.length)finishTyping();},28);
 }
-function finishTyping(){if(!typing)return;clearInterval(typeTimer);typeTimer=null;typing=false;$('dialogueText').textContent=currentLine;$('advanceDialogue').textContent=autoDialogue?'自動播放中…':'下一段 ▸';if(autoDialogue)autoTimer=setTimeout(showNext,880);}
-
+function finishTyping(){if(!typing)return;clearInterval(typeTimer);typeTimer=null;typing=false;$('dialogueText').textContent=currentLine;$('advanceDialogue').textContent=autoDialogue?'自動播放中…':'下一步 ▸';if(autoDialogue)autoTimer=setTimeout(showNext,880);}
+function sceneConfig(){
+ const act=state.act||1, phase=state.phase;
+ if(phase==='cast'||phase==='prologue'||phase==='start')return {bg:'assets/scene/chen_exterior.webp',tag:'清河縣 · 陳宅外院'};
+ if(phase==='ritual'||(act===1&&['interview','public'].includes(phase)))
+  return {bg:'assets/scene/ritual.webp',tag:'陳宅 · 沖喜婚房'};
+ if(phase==='searchSecret'||phase==='solveSecret')
+  return {bg:'assets/scene/ritual.webp',tag:'陳宅 · 神秘密室'};
+ if(phase==='search1'||phase==='search2')return {bg:'assets/scene/chen_exterior.webp',tag:'陳宅 · 內外搜證'};
+ if(phase==='interview'||phase==='public')return {bg:'assets/scene/ritual.webp',tag:'陳宅 · 議事廳'};
+ return {bg:'assets/scene/chen_exterior.webp',tag:'清河縣 · 陳宅'};
+}
+function applySceneVisual(){
+ const cfg=sceneConfig();
+ $('scene').style.backgroundImage=`linear-gradient(180deg,#09080615,#0b070ab3), url("${cfg.bg}")`;
+ if(!queue.length)$('sceneTag').textContent=cfg.tag;
+}
 function showPortraits(left='',right='',who=''){
  const lp=$('leftPortrait'),rp=$('rightPortrait');
  for(const [node,name,nid] of [[lp,left,'leftName'],[rp,right,'rightName']]){
-  const show=!!name && !!V.portraits[name];
+  const mapped=(name==='孔神婆附身'||name==='附身孔神婆')?'附身的孔神婆':name;
+  const show=!!mapped && !!V.portraits[mapped];
   node.classList.toggle('visible',show);
   node.classList.toggle('active',!!who&&name===who);
   node.classList.toggle('dimmed',!!who&&name!==who);
   $(nid).textContent=name;
-  const portrait=node.querySelector('img');if(show&&portrait.getAttribute('src')!==V.portraits[name])portrait.src=V.portraits[name];
+  const portrait=node.querySelector('img');if(show&&portrait.getAttribute('src')!==V.portraits[mapped])portrait.src=V.portraits[mapped];
  }
- $('sceneCenter').style.opacity=(left||right)?'0':'1';
 }
 function speak(items,done,opts={}){
- if(queue.length) return;autoDialogue=!!opts.auto;queue=items.map(x=>({who:x.who,text:x.text,left:x.left||'',right:x.right||''}));queueDone=done||(()=>{});
+ if(queue.length) return;autoDialogue=!!opts.auto;autoHoldLast=!!opts.untilLast;queue=items.map(x=>({who:x.who,text:x.text,left:x.left||'',right:x.right||'',portrait:x.portrait||''}));queueDone=done||(()=>{});
  document.body.classList.add('has-dialogue');showNext();
 }
 function showNext(){
  clearTimeout(autoTimer);autoTimer=null;
  if(typing){finishTyping();return;}
  if(queue.length===0){const done=queueDone;hideDialogue();if(done)done();return;}
- const x=queue.shift();$('dialogue').hidden=false;$('speaker').textContent=x.who;typeLine(x.text);
- showPortraits(x.left||((x.who!=='旁白')?x.who:''),x.right||'',x.who);
+ const x=queue.shift();if(autoHoldLast&&queue.length===0)autoDialogue=false;$('dialogue').hidden=false;$('speaker').textContent=x.who;typeLine(x.text);
+ showPortraits(x.portrait||x.left||((x.who!=='旁白')?x.who:''),x.right||'',x.portrait||x.who);
  $('sceneProgress').textContent='點擊對話框逐句播放';
 }
 $('advanceDialogue').addEventListener('click',ev=>{ev.stopPropagation();if(!autoDialogue)showNext();else if(typing)finishTyping();});
@@ -143,10 +168,28 @@ $('dialogue').addEventListener('click',()=>{if(!autoDialogue)showNext();else if(
 window.addEventListener('keydown',ev=>{if((ev.key===' '||ev.key==='Enter')&&(queue.length||queueDone)&&!autoDialogue&&document.activeElement?.tagName!=='TEXTAREA'){ev.preventDefault();showNext();}});
 function logTalk(who,text,act=state.act){state.publicLog.push({who,text,act});save();renderSidebar();}
 function logLines(items){items.forEach(x=>logTalk(x.who,x.text));}
-function stageLabel(){const map={start:'準備',read:'劇本閱讀',ritual:'孔神婆儀式',interview:'人物問答',public:'公開討論',search1:'第一輪搜證',searchSecret:'密室搜證',solveSecret:'密室推理',search2:'第二輪搜證',identity:'身分推理',vote:'最終投票',ending:'真相揭曉'};return map[state.phase]||state.phase;}
+function renderCastIntro(){
+ const idx=Math.max(0,Math.min(state.castIndex||0,ordered.length-1));
+ const name=ordered[idx];
+ const info=CAST_INTROS[name]||{role:V.labels[name]||'',meta:'PUBLIC INTRODUCTION',desc:'',quote:''};
+ showPortraits('',name,name);
+ setHeader('在場人物','先認識今晚與死者有關的人','在開始調查之前，先認識今夜陳宅的七名主要人物。讀完所有人的公開介紹後，再正式進入故事序章。');
+ const panel=el('article','cast-panel');
+ panel.append(el('div','cast-meta',info.meta));
+ panel.append(el('div','cast-name',name));
+ panel.append(el('div','cast-role',info.role));
+ panel.append(el('p','',info.desc));
+ panel.append(el('div','cast-quote',info.quote));
+ const prog=el('p','muted',`${String(idx+1).padStart(2,'0')} / ${String(ordered.length).padStart(2,'0')}`);panel.append(prog);
+ $('options').appendChild(panel);
+ if(idx<ordered.length-1)option('下一位角色 →',()=>{state.castIndex=idx+1;save();render();},{primary:true});
+ else option('我已了解，開始案件序章',()=>{state.castIndex=0;save();setPhase('prologue');beginPrologue();},{primary:true});
+ auxButton('返回角色選擇',()=>frontSection('roles'));
+}
+function stageLabel(){const map={start:'準備',cast:'在場人物',prologue:'案件序章',read:'劇本閱讀',ritual:'孔神婆儀式',interview:'人物問答',public:'公開討論',search1:'第一輪搜證',searchSecret:'密室搜證',solveSecret:'密室推理',search2:'第二輪搜證',identity:'身分推理',vote:'最終投票',ending:'真相揭曉'};return map[state.phase]||state.phase;}
 function updateHeader(){
+ applySceneVisual();
  $('chapterBadge').textContent=state.phase==='start'?'尚未開始':`第 ${state.act} 幕・${stageLabel()}`;
- $('sceneTag').textContent=state.player?`${state.player} · 陳宅`:'清河縣 · 陳宅';
  if(!queue.length)$('sceneProgress').textContent=stageLabel();
  $('clueCount').textContent=`${(state.publicClues||[]).length} 張公開`;
  $('readerButton').disabled=!state.player;
@@ -154,6 +197,7 @@ function updateHeader(){
 function render(){updateHeader();document.querySelector('.play-area').classList.toggle('choice-mode',state.phase==='interview'&&!!state.interviewTarget);if(queue.length)return;
  switch(state.phase){
  case 'start':return renderStart();
+ case 'cast':return renderCastIntro();
  case 'prologue':return renderPrologue();
  case 'read':return renderRead();
  case 'ritual':return renderRitual();
@@ -170,12 +214,14 @@ function render(){updateHeader();document.querySelector('.play-area').classList.
  }
 }
 function renderPrologue(){
- setHeader('PROLOGUE · 案件序章','陳宅深夜，故事即將開始','旁白會分段打字播放，點擊對話框即可完成當前文字或進入下一段。');
+ showPortraits();
+ setHeader('PROLOGUE · 案件序章','陳宅深夜，故事即將開始','旁白會分段打字播放；你的選項顯示後，可以依序點擊繼續，慢慢進入這場婚禮與疑案交錯的長夜。');
  option('播放序章',()=>beginPrologue(),{primary:true});
 }
 function renderStart(){
- setHeader('民國 · 清河縣','選擇你要扮演的角色','一人遊玩，其餘六位角色由預先編寫的無 Token 對話驅動。選定角色後，只能閱讀當前已解鎖的幕次。');
- for(const name of ordered)option(name,()=>{if(!confirm(`確定要扮演「${name}」嗎？遊戲中的角色秘密會依幕次顯示。`))return;state=newState();state.player=name;setPhase('read');openReader(true);},{sub:D.styles[name]});
+ showPortraits();
+ setHeader('民國 · 清河縣','請先從首頁選擇劇本與角色','本版入口已移到首頁。你可以返回劇本選擇，重新決定想扮演的角色。');
+ option('返回首頁',()=>frontSection('home'),{primary:true});
 }
 function readerText(){const r=D.roleData[state.player];let t='';if(state.act===1)t=r.prelude+'\n\n────────── 第一幕 ──────────\n\n';
  else t=`第 ${state.act} 幕\n\n`;
@@ -195,7 +241,7 @@ $('readerButton').addEventListener('click',()=>openReader(false));
 $('closeReader').addEventListener('click',()=>{if(readerAfter){message('請先完成本幕劇本閱讀，再進行下一階段。');return;}$('readerOverlay').hidden=true;});
 $('readerDone').addEventListener('click',()=>{const cb=readerAfter;readerAfter=null;if(cb)cb();});
 function renderRead(){setHeader(`第 ${state.act} 幕`,state.act===1?'人物故事與第一幕':'閱讀本幕角色劇本',`本幕只會顯示 ${state.player} 的角色劇本，不會開放未解鎖內容。`);option('開啟本幕劇本',()=>openReader(true),{primary:true});}
-function renderRitual(){if(state.act===1){setHeader('第一幕 · 小劇場','孔神婆主持婚禮沖喜儀式','神婆附身、三位姨太太的言行，以及惠雯突然出現，都是日後推理的重要資訊。每按一次只播放一句。');option('開始孔神婆儀式',()=>speak(D.ritual,()=>setPhase('interview')),{primary:true});}
+function renderRitual(){showPortraits();if(state.act===1){setHeader('第一幕 · 小劇場','孔神婆主持婚禮沖喜儀式','此段會切換到婚房儀式場景。神婆附身、眾人的反應，以及惠雯突然現身，都是後續推理的重要資訊。每按一次只播放一句。');option('開始孔神婆儀式',()=>speak(D.ritual.map((line,i)=>line.who==='孔神婆'&&i>=3&&i<=7?{...line,portrait:'附身的孔神婆'}:line),()=>setPhase('interview')),{primary:true});}
  else {setHeader('第三幕 · 小劇場','黑暗中的密室','依組織手冊演出「復活的惠雯」與密室現場，之後先進行密室搜證與推理。');option('進入密室劇場',()=>speak(D.haunt,()=>{state.playerDraws=0;state.playerAreas=[];state.aiDrawsDone=false;setPhase('searchSecret');}),{primary:true});}}
 function renderInterview(){showPortraits(state.player,'','');const remaining=ordered.filter(n=>n!==state.player&&!state.interviewed.includes(n));
  if(state.interviewTarget)return renderInterviewTree();
@@ -212,7 +258,7 @@ function renderInterviewTree(){const target=state.interviewTarget;const path=sta
  setHeader(`第 ${state.act} 幕 · 詢問 ${target}`,labels[layer],`你正在詢問 ${target}，第 ${layer+1} 層／共 3 層。這組問答完成後才會計入本幕的兩名角色額度。`);
  items.forEach((item,i)=>option(item.q,()=>{
   const line=[{who:state.player,text:item.q,left:state.player,right:target},{who:target,text:item.a,left:state.player,right:target}];
-  state.questionPath.push(i);save();speak(line,()=>{logLines(line);render();},{auto:true});
+  state.questionPath.push(i);save();speak(line,()=>{logLines(line);render();},{auto:true,untilLast:true});
  }));
 }
 function renderPublic(){
