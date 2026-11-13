@@ -1,5 +1,5 @@
 'use strict';
-/* 紙妻 V6.8a｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
+/* 紙妻 V6.8b｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
 const D = window.PAPERWIFE_DATA;
 const V = window.PAPERWIFE_VISUALS || {portraits:{},labels:{},caseCatalog:[]};
 if (!D) throw new Error('未載入遊戲資料：請確認 data/game-data.js 已上傳。');
@@ -36,6 +36,7 @@ const CAST_INTROS={
 };
 
 function frontSection(view){
+ preloadPortraits();
  frontView=view;
  const f=$('frontScreen');
  if(view==='play'){f.hidden=true;$('app').hidden=false;return;}
@@ -164,10 +165,10 @@ function finishTyping(){if(!typing)return;clearInterval(typeTimer);typeTimer=nul
 function sceneConfig(){
  const act=state.act||1, phase=state.phase;
  if(phase==='cast'||phase==='prologue'||phase==='start')return {bg:'assets/scene/chen_exterior.webp',tag:'清河縣 · 陳宅外院'};
- if(phase==='ritual'||(act===1&&['interview','public'].includes(phase)))
+ if((act===1&&phase==='ritual')||(act===1&&['interview','public'].includes(phase)))
   return {bg:'assets/scene/ritual.webp',tag:'陳宅 · 沖喜婚房'};
- if(phase==='searchSecret'||phase==='solveSecret')
-  return {bg:'assets/scene/ritual.webp',tag:'陳宅 · 神秘密室'};
+ if(phase==='searchSecret'||phase==='solveSecret'||(act===3&&phase==='ritual'))
+  return {bg:'assets/scene/secret_chamber.webp',tag:'陳宅 · 密室深處'};
  if(phase==='search1'||phase==='search2')return {bg:'assets/scene/chen_exterior.webp',tag:'陳宅 · 內外搜證'};
  if(phase==='interview'||phase==='public')return {bg:'assets/scene/ritual.webp',tag:'陳宅 · 議事廳'};
  return {bg:'assets/scene/chen_exterior.webp',tag:'清河縣 · 陳宅'};
@@ -177,16 +178,31 @@ function applySceneVisual(){
  $('scene').style.backgroundImage=`linear-gradient(180deg,#09080615,#0b070ab3), url("${cfg.bg}")`;
  if(!queue.length)$('sceneTag').textContent=cfg.tag;
 }
+const portraitCache=new Map();
+function preloadPortraits(){
+ Object.values(V.portraits||{}).forEach(src=>{if(!src||portraitCache.has(src))return;const img=new Image();img.decoding='async';img.src=src;portraitCache.set(src,img);});
+}
 function showPortraits(left='',right='',who=''){
  const lp=$('leftPortrait'),rp=$('rightPortrait');
  for(const [node,name,nid] of [[lp,left,'leftName'],[rp,right,'rightName']]){
   const mapped=(name==='孔神婆附身'||name==='附身孔神婆')?'附身的孔神婆':name;
-  const show=!!mapped && !!V.portraits[mapped];
-  node.classList.toggle('visible',show);
-  node.classList.toggle('active',show && !!who&&name===who);
-  node.classList.toggle('dimmed',show && !!who&&name!==who);
-  $(nid).textContent=name;
-  const portrait=node.querySelector('img');if(show&&portrait.getAttribute('src')!==V.portraits[mapped])portrait.src=V.portraits[mapped];
+  const src=V.portraits[mapped];
+  const show=Boolean(mapped && src);
+  const portrait=node.querySelector('img');
+  // The previous character must disappear before requesting the new one.
+  node.classList.remove('visible','active','dimmed');
+  $(nid).textContent=show?name:'';
+  if(!show){portrait.removeAttribute('src');portrait.removeAttribute('data-src');continue;}
+  node.classList.toggle('active',Boolean(who && (name===who || mapped===who)));
+  node.classList.toggle('dimmed',Boolean(who && name!==who && mapped!==who));
+  const requested=portrait.getAttribute('data-src');
+  if(requested!==src){
+   portrait.setAttribute('data-src',src);
+   portrait.onload=()=>{if(portrait.getAttribute('data-src')===src)node.classList.add('visible');};
+   portrait.onerror=()=>{node.classList.remove('visible');};
+   portrait.src=src;
+  }
+  if(portrait.complete && portrait.naturalWidth>0)node.classList.add('visible');
  }
 }
 function speak(items,done,opts={}){
@@ -294,7 +310,7 @@ $('readerButton').addEventListener('click',()=>openReader(false));
 $('closeReader').addEventListener('click',()=>{if(readerAfter){message('請先完成本幕劇本閱讀，再進行下一階段。');return;}$('readerOverlay').hidden=true;});
 $('readerDone').addEventListener('click',()=>{const cb=readerAfter;readerAfter=null;if(cb)cb();});
 function renderRead(){setHeader(`第 ${state.act} 幕`,state.act===1?'人物故事與第一幕':'閱讀本幕角色劇本',`本幕只會顯示 ${state.player} 的角色劇本，不會開放未解鎖內容。`);option('開啟本幕劇本',()=>openReader(true),{primary:true});}
-function renderRitual(){showPortraits();if(state.act===1){setHeader('第一幕 · 小劇場','孔神婆主持婚禮沖喜儀式','此段會切換到婚房儀式場景。神婆附身、眾人的反應，以及惠雯突然現身，都是後續推理的重要資訊。每按一次只播放一句。');option('開始孔神婆儀式',()=>speak(D.ritual.map((line,i)=>line.who==='孔神婆'&&i>=3&&i<=7?{...line,portrait:'附身的孔神婆'}:line),()=>setPhase('interview')),{primary:true});}
+function renderRitual(){showPortraits();if(state.act===1){setHeader('第一幕 · 小劇場','孔神婆主持婚禮沖喜儀式','此段會切換到婚房儀式場景。神婆附身、眾人的反應，以及惠雯突然現身，都是後續推理的重要資訊。每按一次只播放一句。');option('開始孔神婆儀式',()=>speak(D.ritual.map((line,i)=>line.who==='孔神婆'?{...line,left:'孔神婆',right:'',portrait:(i>=3?'附身的孔神婆':'孔神婆')}: {...line,left:'',right:''}),()=>setPhase('interview')),{primary:true});}
  else {setHeader('第三幕 · 小劇場','黑暗中的密室','依組織手冊演出「復活的惠雯」與密室現場，之後先進行密室搜證與推理。');option('進入密室劇場',()=>speak(D.haunt,()=>{state.playerDraws=0;state.playerAreas=[];state.aiDrawsDone=false;setPhase('searchSecret');}),{primary:true});}}
 
 const PLAYER_CHALLENGE_OVERRIDES={
@@ -502,48 +518,42 @@ function autoDraw(round){const total=round==='密室'?2:round==='第一輪'?3:5;
 }
 function renderSearch(round){
  const target=round==='密室'?2:round==='第一輪'?3:5;
- const desc=round==='密室'?'按手冊每位玩家抽取 2 張密室線索，七人合計 14 張。':round==='第一輪'?'按手冊每人 1 張公共線索＋2 張不同人物個人線索；不能搜自己的區域。':'按手冊每人 2 張公共線索＋3 張其他線索（至少涉及兩個人物），不能搜自己的區域。';
+ const desc=round==='密室'?'本輪每位玩家取得 2 張密室線索，七人合計 14 張。':round==='第一輪'?'每人取得 1 張公共線索及 2 張不同人物線索，不能搜自己的區域。':'每人取得 2 張公共線索及 3 張其他線索，至少涉及兩個人物。';
+ showPortraits();
  setHeader(`第 ${state.act} 幕 · ${round}搜證`,`按鈕抽取提示卡（${state.playerDraws}/${target}）`,desc);
- const opts=$('options');
- opts.className='options search-options';
+ const opts=$('options');opts.className='options search-options';
  const grid=el('div','search-stage-grid');
  const left=el('section','search-pane search-actions');
  const right=el('section','search-pane search-card-pane');
  left.append(el('div','search-round-badge',`目前階段：${round}搜證`));
- left.append(el('h3','search-pane-title',`你的抽卡進度 ${state.playerDraws} / ${target}`));
+ left.append(el('h3','search-pane-title',`你的搜證進度 ${state.playerDraws} / ${target}`));
  left.append(el('p','search-pane-desc',desc));
- const hint=round==='密室'?'密室線索會直接影響屍塊身分推理。':round==='第一輪'?'第一輪建議優先建立時間線與可疑關係。':'第二輪建議針對身分、動機與密室異常做交叉比對。';
- left.append(el('p','search-inline-tip','調查建議：'+hint));
+ left.append(el('p','search-inline-tip',round==='密室'?'請留意屍塊特徵，以及哪些部位屬於同一人。':round==='第一輪'?'重點：時間線、房間與人物關係。':'重點：動機、物證和前後證詞的矛盾。'));
+ // Draw button stays next to the card title rather than below the first column.
+ const header=el('div','search-card-toolbar');
+ header.append(el('div','search-card-heading','提示卡'));
  const actionWrap=el('div','search-action-wrap');
+ let button=null;
  if(state.playerDraws<target){
   const category=round==='密室'?'密室':round==='第一輪'?(state.playerDraws===0?'公共':'人物'):(state.playerDraws<2?'公共':'人物');
-  const btn=el('button','search-draw-button',`抽取第 ${state.playerDraws+1} 張提示卡 · ${category}`);btn.type='button';btn.addEventListener('click',()=>drawOne(round));
-  const sub=el('div','search-draw-sub','一次只抽取一張，抽到後會立即顯示在右側提示卡區。');
-  actionWrap.append(btn,sub);
+  button=el('button','search-draw-button',`抽取第 ${state.playerDraws+1} 張 · ${category}`);
+  button.addEventListener('click',()=>drawOne(round));
  }else if(!state.aiDrawsDone){
-  const btn=el('button','search-draw-button',`讓其他角色完成本輪搜證`);btn.type='button';btn.addEventListener('click',()=>autoDraw(round));
-  const sub=el('div','search-draw-sub','其他角色會抽取本輪線索，公共卡自動公開，部分私人卡會選擇分享。');
-  actionWrap.append(btn,sub);
+  button=el('button','search-draw-button','其他角色搜證');button.addEventListener('click',()=>autoDraw(round));
  }else if(round==='密室'){
-  const btn=el('button','search-draw-button',`開始密室屍塊身分推理`);btn.type='button';btn.addEventListener('click',()=>{activeClue=null;setPhase('solveSecret');});actionWrap.append(btn);
+  button=el('button','search-draw-button','開始密室推理');button.addEventListener('click',()=>{activeClue=null;setPhase('solveSecret');});
  }else if(round==='第一輪'){
-  const btn=el('button','search-draw-button',`第一輪搜證結束，開始第二幕人物問答`);btn.type='button';btn.addEventListener('click',()=>{activeClue=null;setPhase('interview');});actionWrap.append(btn);
- }else {
-  const btn=el('button','search-draw-button',`第二輪搜證結束，進入身分推理`);btn.type='button';btn.addEventListener('click',()=>{activeClue=null;setPhase('identity');});actionWrap.append(btn);
+  button=el('button','search-draw-button','進入人物問答');button.addEventListener('click',()=>{activeClue=null;setPhase('interview');});
+ }else{
+  button=el('button','search-draw-button','進入身分推理');button.addEventListener('click',()=>{activeClue=null;setPhase('identity');});
  }
- left.append(actionWrap);
- if(state.playerDraws===target&&state.aiDrawsDone){
-  const helper=el('button','search-link-button','打開右側調查手冊查看公開線索');helper.type='button';helper.addEventListener('click',()=>{sideTab='clues';renderSidebar();});left.append(helper);
- }
- right.append(el('div','search-card-heading','提示卡'));
+ button.type='button';actionWrap.append(button);header.append(actionWrap);right.append(header);
  if(activeClue){
   const card=el('article','search-clue-card');
   card.append(el('div','search-clue-id',`提示卡・${String(activeClue.id).padStart(2,'0')}｜${activeClue.area}`));
-  card.append(el('p','search-clue-text',activeClue.text));
-  right.append(card);
+  card.append(el('p','search-clue-text',activeClue.text));right.append(card);
  }else{
-  right.append(el('div','search-clue-placeholder',`尚未抽到新提示卡
-抽卡後會直接顯示在這裡，方便你不必往下捲動頁面。`));
+  right.append(el('div','search-clue-placeholder','尚未抽取提示卡，請點選上方按鈕。'));
  }
  grid.append(left,right);opts.append(grid);
 }

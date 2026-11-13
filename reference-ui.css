@@ -189,3 +189,49 @@ body[data-phase="cast"] .scene-top{top:15px}
  .search-draw-button{font-size:22px;width:100%}
  .search-card-heading{font-size:25px}
 }
+
+/* V6.8b: show only loaded portraits; retain solid RGB and full opacity for people */
+.portrait:not(.visible){opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+.portrait.visible{opacity:1!important;visibility:visible!important;mix-blend-mode:normal!important}
+.portrait.visible.active{opacity:1!important;filter:drop-shadow(0 9px 20px rgba(0,0,0,.78))!important}
+.portrait.visible.dimmed{opacity:1!important;filter:brightness(.8) saturate(.85)!important}
+.portrait-image{opacity:1!important;mask:none!important;-webkit-mask:none!important}
+/* No duplicate background in portrait, no embedded black rectangle */
+body[data-phase="search1"] .portrait,body[data-phase="search2"] .portrait,body[data-phase="searchSecret"] .portrait{visibility:hidden!important}
+/* Compact search drawer: stays within the indicated bottom zone. */
+body[data-phase="search1"] .play-area>.control-panel,
+body[data-phase="search2"] .play-area>.control-panel,
+body[data-phase="searchSecret"] .play-area>.control-panel{
+  left:6.6%!important;right:6.6%!important;bottom:3%!important;
+  padding:13px 17px!important;max-height:min(43vh,385px)!important;overflow:hidden!important;
+}
+body[data-phase="search1"] .control-panel h2,
+body[data-phase="search2"] .control-panel h2,
+body[data-phase="searchSecret"] .control-panel h2{font-size:clamp(20px,2vw,29px)!important;margin:3px 0 5px!important}
+body[data-phase="search1"] .control-panel .section-desc,
+body[data-phase="search2"] .control-panel .section-desc,
+body[data-phase="searchSecret"] .control-panel .section-desc{font-size:12px;margin:0 0 10px!important}
+.search-stage-grid{grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr)!important;gap:12px!important;align-items:stretch!important}
+.search-stage-grid .search-pane{min-width:0;min-height:0!important;max-height:245px;overflow:hidden;padding:14px!important}
+.search-stage-grid .search-pane-title{font-size:17px!important;margin-bottom:6px!important}
+.search-stage-grid .search-pane-desc,.search-stage-grid .search-inline-tip{font-size:12px;line-height:1.65;margin-bottom:7px}
+.search-card-pane{display:flex;flex-direction:column}
+.search-card-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex:0 0 auto;margin-bottom:8px}
+.search-card-heading{font-size:24px!important;white-space:nowrap;margin:0!important}
+.search-card-toolbar .search-action-wrap{padding:0!important;margin:0!important;flex:0 1 auto}
+.search-card-toolbar .search-draw-button{width:auto!important;min-height:42px!important;font-size:13px!important;letter-spacing:.025em!important;white-space:normal;text-align:center;padding:7px 14px!important}
+.search-card-pane .search-clue-card{min-height:0!important;overflow-y:auto!important;flex:1 1 auto;padding:10px 14px!important;height:auto!important}
+.search-card-pane .search-clue-id{margin-bottom:5px!important;font-size:11px!important}
+.search-card-pane .search-clue-text{font-size:14px!important;line-height:1.75!important;overflow-wrap:anywhere}
+.search-card-pane .search-clue-placeholder{min-height:90px;height:auto;padding:8px}
+@media(max-width:700px){
+ body[data-phase="search1"] .play-area>.control-panel,
+ body[data-phase="search2"] .play-area>.control-panel,
+ body[data-phase="searchSecret"] .play-area>.control-panel{
+  left:3%!important;right:3%!important;bottom:8px!important;max-height:52svh!important;overflow-y:auto!important;
+ }
+ .search-stage-grid{grid-template-columns:1fr!important;gap:7px!important}
+ .search-stage-grid .search-pane{padding:8px!important;max-height:none!important}
+ .search-card-pane{max-height:30svh!important}
+ .search-card-toolbar{flex-wrap:wrap}
+}
