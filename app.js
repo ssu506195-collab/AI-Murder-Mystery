@@ -1,5 +1,5 @@
 'use strict';
-/* 紙妻 V6.8b｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
+/* 紙妻 V6.8c｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
 const D = window.PAPERWIFE_DATA;
 const V = window.PAPERWIFE_VISUALS || {portraits:{},labels:{},caseCatalog:[]};
 if (!D) throw new Error('未載入遊戲資料：請確認 data/game-data.js 已上傳。');
@@ -44,8 +44,8 @@ function frontSection(view){
  f.hidden=false;$('app').hidden=true;
  const pane=$('frontInner');clear(pane);
  const background=$('frontHero');background.className='front-hero';
- background.classList.add(view==='home'?'front-home':view==='cases'?'front-case':'front-role');
- if(view==='home')renderHome(pane);else if(view==='cases')renderCases(pane);else if(view==='roles')renderRoleSelect(pane);
+ background.classList.add(view==='home'?'front-home':view==='cases'||view==='overview'?'front-case':'front-role');
+ if(view==='home')renderHome(pane);else if(view==='cases')renderCases(pane);else if(view==='overview')renderCaseOverview(pane);else if(view==='roles')renderRoleSelect(pane);
 }
 function renderHome(pane){
  const copy=el('section','ref-home-copy');
@@ -72,11 +72,23 @@ function renderCases(pane){
   info.append(el('h3','',c.title));info.append(el('p','ref-case-era',c.category));
   info.append(el('p','ref-case-story',c.subtitle));
   info.append(el('p','ref-case-facts',`♟　角色人數：${c.players||'7 人劇本'}　 ◷　預估遊玩時間：${c.duration||'約 4–6 小時'}`));
-  const go=frontButton('選擇《'+c.title+'》  ›',()=>{if(c.available)frontSection('roles');},'ref-case-go');info.append(go);
+  const go=frontButton('閱讀《'+c.title+'》故事簡介  ›',()=>{if(c.available)frontSection('overview');},'ref-case-go');info.append(go);
   card.append(info);area.append(card);
  }
  area.append(frontButton('← 返回首頁',()=>frontSection('home'),'ref-small-back'));
  pane.append(area);
+}
+function renderCaseOverview(pane){
+ const area=el('section','ref-story-overview');
+ area.append(el('div','front-eyebrow','THE STORY BEGINS'));
+ area.append(el('h2','front-section-title','紙妻・故事簡介'));
+ area.append(el('p','ref-overview-guide','民國江南，濃霧深鎖陳宅。在選擇角色前，先聽聽這座宅院流傳的故事。'));
+ const body=el('div','ref-overview-text');
+ body.textContent=D.caseSynopsis||'';area.append(body);
+ const actions=el('div','ref-overview-actions');
+ actions.append(frontButton('選擇我要扮演的角色 ›',()=>frontSection('roles'),'gold-button'));
+ actions.append(frontButton('← 返回劇本列表',()=>frontSection('cases'),'outline-button'));
+ area.append(actions);pane.append(area);
 }
 function renderRoleSelect(pane){
  clear(pane);
@@ -98,19 +110,25 @@ function renderRoleSelect(pane){
   const role=randomRoleMode?D.roles[Math.floor(Math.random()*D.roles.length)]:selectedRole;
   state=newState();state.player=role;state.phase='cast';state.castIndex=0;save();frontSection('play');render();
  },'ref-role-confirm'));
- area.append(actions);area.append(frontButton('← 返回劇本選擇',()=>frontSection('cases'),'ref-small-back'));
+ area.append(actions);area.append(frontButton('← 返回故事簡介',()=>frontSection('overview'),'ref-small-back'));
  pane.append(area);
 }
 function beginPrologue(){
- const intro=`民國年間，戰火與瘟疫讓江南清河縣逐漸衰敗。鎮西長鹽山腳下，矗立著一座古老的陳宅，終年濃霧不散。\n多年來，姨太太接連離奇失蹤，莫名的大火幾乎燒盡家業；夜深時，宅內還會傳出如同女鬼哭泣的歌聲。\n十一月初七的雨夜，雷鳴電閃。七位各懷心事的人因一場婚禮來到陳宅，卻不知這座古宅藏著多少不能說出口的秘密。\n當大雨停歇、黎明到來之時，究竟有幾個人能平安離開？`;
- const narrative=intro.split('\n').map(x=>x.trim()).filter(Boolean);
- const merged=[];
- for(const sentence of narrative){
-  if(merged.length && merged[merged.length-1].length<48)merged[merged.length-1]+=sentence;
-  else merged.push(sentence);
+ const source=D.sharedBackstory||'';
+ const paragraphs=source.split(/\n{2,}/).map(s=>s.trim()).filter(Boolean);
+ const lines=[];
+ for(const para of paragraphs){
+  // Group by sentence rather than cutting words in the middle.
+  const sentences=para.match(/[^。！？]+[。！？]?/g)||[para];
+  let chunk='';
+  for(const sentence of sentences){
+   const piece=sentence.trim();if(!piece)continue;
+   if(chunk&&chunk.length+piece.length>105){lines.push({who:'旁白',text:chunk});chunk='';}
+   chunk+=piece;
+  }
+  if(chunk)lines.push({who:'旁白',text:chunk});
  }
- const lines=merged.map(t=>({who:'旁白',text:t,left:'',right:''}));
- if(!lines.length)lines.push({who:'旁白',text:'民國的陳宅，故事由此開始。'});
+ if(!lines.length)lines.push({who:'旁白',text:'民國三十年代，清河縣的故事即將展開。'});
  speak(lines,()=>{setPhase('read');openReader(true);});
 }
 
@@ -297,21 +315,25 @@ function readerText(){const r=D.roleData[state.player];let t='';if(state.act===1
  t+=r.acts[state.act-1];return t;
 }
 function openReader(forAdvance=false){if(!state.player)return;
- const r=D.roleData[state.player];$('readerTitle').textContent=state.act===1?`${state.player} · 人物故事與第一幕`:`${state.player} · 第 ${state.act} 幕`;
+ const r=D.roleData[state.player];$('readerTitle').textContent=state.act===1?`${state.player} · 你的故事開始與第一幕`:`${state.player} · 第 ${state.act} 幕`;
  $('readerKicker').textContent='私人劇本｜僅顯示本幕以前內容';
  const lines=readerText();$('readerContent').textContent=lines;
  $('readerContent').scrollTop=0;
  $('readerFooterText').textContent='請讀至本幕結束；之後的劇本不會提前解鎖。';
  $('readerDone').hidden=!forAdvance;
  $('readerOverlay').hidden=false;
+ // Reset the reader after it becomes visible. This also fixes restored scroll offsets.
+ $('readerContent').scrollTop=0;
+ $('readerContent').scrollTo?.({top:0,behavior:'instant'});
+ requestAnimationFrame(()=>{$('readerContent').scrollTop=0;});
  readerAfter=forAdvance?()=>{if(!state.readActs.includes(state.act))state.readActs.push(state.act);save();$('readerOverlay').hidden=true; if(state.act===1||state.act===3)setPhase('ritual');else if(state.act===2){state.playerDraws=0;state.playerAreas=[];state.aiDrawsDone=false;setPhase('search1');}else setPhase('interview');}:null;
 }
 $('readerButton').addEventListener('click',()=>openReader(false));
 $('closeReader').addEventListener('click',()=>{if(readerAfter){message('請先完成本幕劇本閱讀，再進行下一階段。');return;}$('readerOverlay').hidden=true;});
 $('readerDone').addEventListener('click',()=>{const cb=readerAfter;readerAfter=null;if(cb)cb();});
-function renderRead(){setHeader(`第 ${state.act} 幕`,state.act===1?'人物故事與第一幕':'閱讀本幕角色劇本',`本幕只會顯示 ${state.player} 的角色劇本，不會開放未解鎖內容。`);option('開啟本幕劇本',()=>openReader(true),{primary:true});}
+function renderRead(){setHeader(`第 ${state.act} 幕`,state.act===1?'你的故事開始・第一幕':'閱讀本幕角色劇本',`本幕只會顯示 ${state.player} 的角色劇本，不會開放未解鎖內容。`);option('開啟本幕劇本',()=>openReader(true),{primary:true});}
 function renderRitual(){showPortraits();if(state.act===1){setHeader('第一幕 · 小劇場','孔神婆主持婚禮沖喜儀式','此段會切換到婚房儀式場景。神婆附身、眾人的反應，以及惠雯突然現身，都是後續推理的重要資訊。每按一次只播放一句。');option('開始孔神婆儀式',()=>speak(D.ritual.map((line,i)=>line.who==='孔神婆'?{...line,left:'孔神婆',right:'',portrait:(i>=3?'附身的孔神婆':'孔神婆')}: {...line,left:'',right:''}),()=>setPhase('interview')),{primary:true});}
- else {setHeader('第三幕 · 小劇場','黑暗中的密室','依組織手冊演出「復活的惠雯」與密室現場，之後先進行密室搜證與推理。');option('進入密室劇場',()=>speak(D.haunt,()=>{state.playerDraws=0;state.playerAreas=[];state.aiDrawsDone=false;setPhase('searchSecret');}),{primary:true});}}
+ else {setHeader('第三幕 · 小劇場','黑暗中的密室','昏暗的密室深處，古老機關與離奇屍塊正等待你們調查。之後將進入密室搜證與推理。');option('進入密室劇場',()=>speak(D.haunt,()=>{state.playerDraws=0;state.playerAreas=[];state.aiDrawsDone=false;setPhase('searchSecret');}),{primary:true});}}
 
 const PLAYER_CHALLENGE_OVERRIDES={
  '1':{
@@ -564,7 +586,7 @@ function renderSolveSecret(){setHeader('第三幕 · 密室推理','四具屍體
   else message('再想想孔神婆儀式裡提到的碧雲、卿卿、憐兒，以及另一位死者。');
  });
 }
-function renderIdentity(){setHeader('第三幕 · 身分推理','誰頂替了陳宅主人？','依組織手冊，第三幕結束前必須推理出現任陳聿明的真實身分。');
+function renderIdentity(){setHeader('第三幕 · 身分推理','誰頂替了陳宅主人？','第三幕的證據已逐漸指向陳宅主人的祕密。請比對人物證詞與照片，找出他的真實身分。');
  for(const x of ['現任陳聿明其實是駱午陽','東青其實是陳聿明','戴思齊其實是陳聿明','阿忠其實是孔神婆'])option(x,()=>{if(x.startsWith('現任陳聿明')){state.solutions.identity=true;setPhase('interview');}else message('請再比對黃埔軍校照片、手腕特徵和舊火災。');});
 }
 function renderVote(){setHeader('第四幕 · 最終抉擇','投出你認為的兇手','請按順序作出選擇：殺害惠雯的兇手、是否認為自己感染、是否服用娃娃眼，以及保留或銷毀《陳氏古法》。');
@@ -586,16 +608,16 @@ function renderEnding(){setHeader('最終章 · 復盤','紙妻 · 真相揭曉'
  const take=state.votes.medicine==='決定服用';
  const survive=(take===infection);
  const side=state.votes.ancient.startsWith('銷毀')?'銷毀':'保留';
- const lines=[`你投出的兇手：${state.votes.killer}${knew?'（與手冊復盤一致）':'（與手冊復盤不符）'}`,
+ const lines=[`你指認的兇手是${state.votes.killer}。${knew?'指認正確！':'指認錯誤。'}真正殺害惠雯的兇手是阿忠。`,
   `惠雯的真正致命行為發生於 23:05 左右，阿忠在婚房勒死惠雯。紅豆在較早時候也曾勒住她，東青亦曾企圖下毒。`,
-  `你選擇${take?'服用':'不服用'}娃娃眼；依角色原始結局設定，${state.player}${infection?'已感染':'未感染'}。${survive?'這項選擇與角色狀況一致。':'這項選擇與角色狀況不符。'}`,
-  `你投票選擇${side}《陳氏古法》。在單人版中其餘六名角色不進行隨機計票，這裡直接呈現你的陣營選擇。`,
+  `你選擇${take?'服用':'不服用'}娃娃眼。事實上，${state.player}${infection?'已感染瘟疫':'並未感染瘟疫'}。${survive?'這個決定符合你目前的身體狀況。':'這個決定可能讓你付出代價。'}`,
+  `最後，你選擇${side}《陳氏古法》。這個抉擇將影響陳宅眾人接下來的命運。`,
   '現任「陳聿明」是經過整容的情報人員駱午陽；真正的陳聿明是偽裝成園丁的阿忠。',
   '孔神婆遭駱午陽殺害，其屍體遭紅豆後續肢解藏匿。瘟疫、娃娃眼及《陳氏古法》的秘密，將所有人推向了同一場危機。'];
  for(const t of lines){const box=el('div','clue-reveal');box.style.marginBottom='10px';box.appendChild(el('p','',t));$('options').appendChild(box);}
  const faction=D.factionEndings[side];
- const endingBox=el('div','clue-reveal');endingBox.style.margin='12px 0';endingBox.appendChild(el('strong','','組織手冊｜'+side+'陣營結局'));endingBox.appendChild(el('p','',faction));$('options').appendChild(endingBox);
- auxButton('閱讀組織手冊完整復盤（全劇透）',()=>{readerAfter=null;$('readerKicker').textContent='組織手冊｜已通關';$('readerTitle').textContent='故事真相與完整時間線';$('readerContent').textContent=D.fullTruth;$('readerContent').scrollTop=0;$('readerFooterText').textContent='已到終局，現在可以閱讀全部案件真相。';$('readerDone').hidden=true;$('readerOverlay').hidden=false;});
+ const endingBox=el('div','clue-reveal');endingBox.style.margin='12px 0';endingBox.appendChild(el('strong','',side+'・陣營結局'));endingBox.appendChild(el('p','',faction));$('options').appendChild(endingBox);
+ auxButton('閱讀完整真相與事件時間線（全劇透）',()=>{readerAfter=null;$('readerKicker').textContent='案件結局・已通關';$('readerTitle').textContent='故事真相與完整時間線';$('readerContent').textContent=D.fullTruth;$('readerContent').scrollTop=0;$('readerFooterText').textContent='已到終局，現在可以閱讀全部案件真相。';$('readerDone').hidden=true;$('readerOverlay').hidden=false;requestAnimationFrame(()=>{$('readerContent').scrollTop=0;});});
  auxButton('回看第一幕至第四幕已解鎖劇本',()=>openReader(false));
  auxButton('重新遊玩',()=>{$('resetButton').click();});
  state.complete=true;save();

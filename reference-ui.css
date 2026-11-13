@@ -235,3 +235,14 @@ body[data-phase="searchSecret"] .control-panel .section-desc{font-size:12px;marg
  .search-card-pane{max-height:30svh!important}
  .search-card-toolbar{flex-wrap:wrap}
 }
+
+/* V6.8c: spoiler-free case introduction before character selection */
+.ref-story-overview{max-width:1060px;margin:clamp(25px,7vh,85px) auto 24px;padding:clamp(22px,4.5vw,55px);background:linear-gradient(120deg,rgba(13,10,14,.95),rgba(28,19,20,.91));border:1px solid #b18d5b;box-shadow:0 18px 65px #0009;color:#efe1c9}
+.ref-story-overview>.front-eyebrow{text-align:center;color:#d5ab74}
+.ref-story-overview>.front-section-title{text-align:center;font-size:clamp(32px,4.5vw,55px);margin:8px 0 20px}
+.ref-overview-guide{text-align:center;font-size:15px;color:#cbb18b;line-height:1.9}
+.ref-overview-text{white-space:pre-wrap;line-height:2.15;font-size:clamp(15px,1.25vw,19px);padding:24px clamp(12px,3vw,42px);border-top:1px solid #765b3f;border-bottom:1px solid #765b3f;max-height:53vh;overflow-y:auto;overflow-wrap:anywhere}
+.ref-overview-actions{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+.ref-overview-actions .front-button{min-height:48px;padding:12px 22px;border:1px solid #9f7a4a;background:rgba(26,19,18,.96);color:#f2d4a1}
+.ref-overview-actions .gold-button{background:#665035;color:#fff0d8}
+.reader-content{overflow-y:auto;overscroll-behavior:contain;scroll-behavior:auto}
