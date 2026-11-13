@@ -427,6 +427,11 @@ function renderInterview(){showPortraits(state.player,'','');const remaining=ord
  if(state.interviewed.length>=2){option('兩名角色詢問完成，開始其他角色公開討論',()=>setPhase('public'),{primary:true});return;}
  for(const n of remaining)option(`詢問 ${n}`,()=>{state.interviewTarget=n;state.questionPath=[];save();render();},{sub:'本幕 3 個角色專屬問題'});
 }
+function playerAwareQuestion(item){
+ const role=state.player;
+ const override=(window.PAPERWIFE_ROLE_AWARE||{})[role]?.[item.q];
+ return {q:override?.q||item.q,a:override?.a||item.a};
+}
 function renderInterviewTree(){const target=state.interviewTarget;const path=state.questionPath;
  showPortraits(state.player,target,'');
  let items=D.questions[String(state.act)][target];for(const i of path){items=items[i].next||[];}
@@ -434,11 +439,11 @@ function renderInterviewTree(){const target=state.interviewTarget;const path=sta
  if(layer===3||items.length===0){state.interviewed.push(target);state.interviewTarget=null;state.questionPath=[];save();render();return;}
  const labels=['選擇主要問題','選擇第一次追問','選擇第二次追問'];
  setHeader(`第 ${state.act} 幕 · 詢問 ${target}`,labels[layer],`你正在詢問 ${target}，第 ${layer+1} 層／共 3 層。這輪問答會盡量提供能排除嫌疑、釐清時間線與動機的有效資訊。`);
- items.forEach((item,i)=>option(item.q,()=>{
-  const line=[{who:state.player,text:item.q,left:state.player,right:target},{who:target,text:item.a,left:state.player,right:target}];
+ items.forEach((item,i)=>{const dialogue=playerAwareQuestion(item);option(dialogue.q,()=>{
+  const line=[{who:state.player,text:dialogue.q,left:state.player,right:target},{who:target,text:dialogue.a,left:state.player,right:target}];
   // 每一條主問題與第一層追問均有專屬詳述，不再附加重複的制式補充。
   state.questionPath.push(i);save();speak(line,()=>{logLines(line);render();},{auto:true,untilLast:true});
- }));
+ });});
 }
 function renderPublic(){
  setHeader(`第 ${state.act} 幕 · 公開對話`,'其他人的質疑，也會影響你的判斷','先觀看其他角色之間的公開問答，再由其他角色反過來詢問你。每段對話都必須點擊繼續才會展示下一句。');
