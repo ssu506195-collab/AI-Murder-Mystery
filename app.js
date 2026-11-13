@@ -1,5 +1,5 @@
 'use strict';
-/* 紙妻 V6.4｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
+/* 紙妻 V6.6｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
 const D = window.PAPERWIFE_DATA;
 const V = window.PAPERWIFE_VISUALS || {portraits:{},labels:{},caseCatalog:[]};
 if (!D) throw new Error('未載入遊戲資料：請確認 data/game-data.js 已上傳。');
@@ -47,48 +47,90 @@ function frontSection(view){
  if(view==='home')renderHome(pane);else if(view==='cases')renderCases(pane);else if(view==='roles')renderRoleSelect(pane);
 }
 function renderHome(pane){
- const box=el('div','front-copy');
- box.append(el('div','front-eyebrow','IMMERSIVE MYSTERY ROLEPLAY'));
- box.append(el('h1','front-headline','穿越進入故事。'));
- box.append(el('h1','front-headline gold-line','親手找出真相。'));
- box.append(el('p','front-summary','這不是單純閱讀故事，而是一場你親自參與的劇本殺。進入案件後，你將成為故事中的其中一人，透過序章、角色自我介紹、公開問答、搜證與推理，一步步找出兇手、還原動機，並揭開被埋藏多年的真相。'));
- const buttons=el('div','front-actions');
- buttons.append(frontButton('選擇劇本',()=>frontSection('cases'),'gold-button'));
- if(state.player){buttons.append(frontButton('繼續上次進度',()=>{frontSection('play');render();},'outline-button'));}
- box.append(buttons);box.append(el('div','front-footnote','純單人離線固定問答・無須 Token・繁體中文'));
- pane.append(box);
+ const shell=el('section','landing-shell');
+ const intro=el('div','landing-copy');
+ intro.append(el('div','front-eyebrow','INTERACTIVE MURDER MYSTERY'));
+ intro.append(el('h1','landing-title','劇本殺'));
+ intro.append(el('p','landing-subtitle','沉浸式單人推理體驗'));
+ intro.append(el('p','landing-summary','從閱讀劇本，走進扮演角色，再到公開問答、搜證推理與最終投票——你不只是旁觀者，而是故事中的其中一人。每一句證詞、每一張提示卡、每一次追問，都可能左右你對兇手與真相的判斷。'));
+ const actions=el('div','landing-actions');
+ actions.append(frontButton('開始遊戲',()=>frontSection('cases'),'gold-button'));
+ actions.append(frontButton('劇本列表',()=>frontSection('cases'),'outline-button'));
+ if(state.player) actions.append(frontButton('繼續上次進度',()=>{frontSection('play');render();},'outline-button'));
+ intro.append(actions);
+ intro.append(el('div','landing-foot','免 Token・繁體中文・單人完整遊玩版'));
+ const art=el('div','landing-art');
+ const img=el('img','landing-art-image');img.src='assets/scene/hero.webp';img.alt='紙妻主要角色群像';art.append(img);
+ shell.append(intro,art);
+ pane.append(shell);
 }
 function renderCases(pane){
- pane.append(frontButton('← 返回首頁',()=>frontSection('home'),'text-button'));
- const area=el('section','case-library');area.append(el('div','front-eyebrow','CHOOSE YOUR CASE'));area.append(el('h2','front-section-title','選擇劇本'));area.append(el('p','front-muted','先選擇要體驗的故事，再決定扮演哪位角色。劇本卡片下方只保留玩家最在意的資訊：故事簡介、角色人數與預估遊玩時間。'));
+ const shell=el('section','selection-shell');
+ const head=el('div','selection-head');
+ head.append(frontButton('← 返回首頁',()=>frontSection('home'),'text-button'));
+ const titles=el('div','selection-titles');
+ titles.append(el('div','front-eyebrow','CHOOSE YOUR CASE'));
+ titles.append(el('h2','front-section-title','選擇劇本'));
+ titles.append(el('p','front-muted','請選擇你想體驗的劇本。每部劇本都會標示故事簡介、角色人數與預估遊玩時間。'));
+ head.append(titles);
+ shell.append(head);
+ const grid=el('div','case-gallery');
  for(const c of V.caseCatalog){
-  const card=el('article','case-card');
-  const cover=el('img','case-cover');cover.src=c.cover;cover.alt=c.title+' 劇本封面';card.append(cover);
-  const info=el('div','case-info');info.append(el('div','front-eyebrow',c.category));info.append(el('h3','',c.title));info.append(el('p','',c.subtitle));info.append(el('p','case-spec',`${c.players||'7 人劇本'}　·　${c.duration||'約 4–6 小時'}`));
-  info.append(frontButton('進入劇本 →',()=>{if(c.available)frontSection('roles');},'gold-button'));card.append(info);area.append(card);
+   const card=el('article','case-card featured-case');
+   const coverWrap=el('div','case-cover-wrap');
+   const cover=el('img','case-cover');cover.src=c.cover;cover.alt=c.title+' 劇本封面';coverWrap.append(cover);
+   const info=el('div','case-info');
+   info.append(el('div','front-eyebrow',c.category));
+   info.append(el('h3','',c.title));
+   info.append(el('p','case-pitch',c.subtitle));
+   info.append(el('p','case-spec',`角色人數：${c.players||'7 人劇本'}　　遊玩時間：${c.duration||'約 4–6 小時'}`));
+   const actions=el('div','case-actions');
+   actions.append(frontButton('進行中 →',()=>{if(c.available)frontSection('roles');},'gold-button'));
+   info.append(actions);
+   card.append(coverWrap,info);grid.append(card);
  }
- pane.append(area);
+ shell.append(grid);
+ pane.append(shell);
 }
 function renderRoleSelect(pane){
  clear(pane);
- pane.append(frontButton('← 返回劇本選擇',()=>frontSection('cases'),'text-button'));
- const area=el('section','role-library');area.append(el('div','front-eyebrow','YOUR SECRET IDENTITY'));area.append(el('h2','front-section-title','決定你的角色'));area.append(el('p','front-muted','你將扮演七位角色中的一人。確認身分後，會先進入「在場人物」自我介紹，再正式開始序章與後續調查。'));
+ const shell=el('section','selection-shell');
+ const head=el('div','selection-head');
+ head.append(frontButton('← 返回劇本選擇',()=>frontSection('cases'),'text-button'));
+ const titles=el('div','selection-titles');
+ titles.append(el('div','front-eyebrow','YOUR SECRET IDENTITY'));
+ titles.append(el('h2','front-section-title','決定你的角色'));
+ titles.append(el('p','front-muted','你將成為七名涉案角色之一。每位角色都有自己的秘密、任務與立場；確認身分後，會先進入在場人物自我介紹，再正式開始劇情。'));
+ head.append(titles);
+ shell.append(head);
+ const box=el('div','role-selection-box');
  const modes=el('div','role-modes');
- const choose=frontButton('◉ 自行選擇',()=>{randomRoleMode=false;renderRoleSelect(pane);},!randomRoleMode?'mode-current':'');
- const random=frontButton('◯ 隨機抽取',()=>{randomRoleMode=true;renderRoleSelect(pane);},randomRoleMode?'mode-current':'');
- modes.append(choose,random);area.append(modes);
+ const choose=frontButton('自行選擇角色',()=>{randomRoleMode=false;renderRoleSelect(pane);},!randomRoleMode?'mode-current':'');
+ const random=frontButton('隨機分配角色',()=>{randomRoleMode=true;renderRoleSelect(pane);},randomRoleMode?'mode-current':'');
+ modes.append(choose,random);box.append(modes);
  const grid=el('div','role-grid');
- D.roles.forEach((name,i)=>{
-  const b=el('button','role-card'+(selectedRole===name&&!randomRoleMode?' selected':''));b.type='button';b.setAttribute('aria-pressed',String(selectedRole===name&&!randomRoleMode));
-  const img=el('img','role-portrait');img.src=V.portraits[name]||'';img.alt=name+' 角色立繪';b.append(img);
-  b.append(el('div','role-name',String(i+1).padStart(2,'0')+' · '+name));b.append(el('div','role-tag',V.labels[name]||''));
-  b.addEventListener('click',()=>{selectedRole=name;randomRoleMode=false;frontSection('roles');});grid.append(b);
- });area.append(grid);
- const footer=el('div','role-bottom');footer.append(frontButton(randomRoleMode?'抽取我的角色':'確認選擇，進入故事',()=>{
-  const role=randomRoleMode?D.roles[Math.floor(Math.random()*D.roles.length)]:selectedRole;
-  if(!confirm('確定開始扮演「'+role+'」嗎？此操作會覆蓋目前的遊戲進度。'))return;
-  state=newState();state.player=role;state.phase='cast';state.castIndex=0;save();frontSection('play');render();
- },'gold-button'));area.append(footer);pane.append(area);
+ D.roles.forEach((name)=>{
+   const b=el('button','role-card'+(selectedRole===name&&!randomRoleMode?' selected':''));
+   b.type='button';
+   const img=el('img','role-portrait');img.src=V.portraits[name]||'';img.alt=name+' 角色立繪';
+   const info=el('div','role-card-info');
+   info.append(el('div','role-name',name));
+   info.append(el('div','role-tag',V.labels[name]||''));
+   b.append(img,info);
+   b.addEventListener('click',()=>{selectedRole=name;randomRoleMode=false;renderRoleSelect(pane);});
+   grid.append(b);
+ });
+ box.append(grid);
+ const footer=el('div','role-bottom');
+ footer.append(frontButton('我，想扮演這個角色',()=>{
+   const role=randomRoleMode?D.roles[Math.floor(Math.random()*D.roles.length)]:selectedRole;
+   if(!confirm('確定開始扮演「'+role+'」嗎？此操作會覆蓋目前的遊戲進度。'))return;
+   state=newState();state.player=role;state.phase='cast';state.castIndex=0;save();frontSection('play');render();
+ },'gold-button'));
+ if(randomRoleMode) footer.append(el('div','role-hint',`系統將在 ${D.roles.length} 位角色中隨機替你抽取一位。`));
+ box.append(footer);
+ shell.append(box);
+ pane.append(shell);
 }
 function beginPrologue(){
  const narrative=D.intro.replace(/\r/g,'').split(/(?<=[。！？])|\n+/).map(x=>x.trim()).filter(Boolean);
@@ -190,19 +232,33 @@ $('dialogue').addEventListener('click',()=>{if(!autoDialogue)showNext();else if(
 window.addEventListener('keydown',ev=>{if((ev.key===' '||ev.key==='Enter')&&(queue.length||queueDone)&&!autoDialogue&&document.activeElement?.tagName!=='TEXTAREA'){ev.preventDefault();showNext();}});
 function logTalk(who,text,act=state.act){state.publicLog.push({who,text,act});save();renderSidebar();}
 function logLines(items){items.forEach(x=>logTalk(x.who,x.text));}
+function renderCastThumbStrip(current){
+ const wrap=el('div','cast-thumb-strip');
+ ordered.forEach((name,idx)=>{
+  const card=el('button','cast-thumb'+(name===current?' active':''));card.type='button';
+  const img=el('img','cast-thumb-image');img.src=V.portraits[name]||'';img.alt=name;
+  const meta=el('div','cast-thumb-meta');
+  meta.append(el('div','cast-thumb-index',String(idx+1).padStart(2,'0')));
+  meta.append(el('div','cast-thumb-name',name));
+  meta.append(el('div','cast-thumb-role',V.labels[name]||''));
+  card.append(img,meta);
+  card.addEventListener('click',()=>{state.castIndex=idx;save();render();});
+  wrap.append(card);
+ });
+ return wrap;
+}
 function renderCastIntro(){
  const idx=Math.max(0,Math.min(state.castIndex||0,ordered.length-1));
  const name=ordered[idx];
  const info=CAST_INTROS[name]||{role:V.labels[name]||'',meta:'PUBLIC INTRODUCTION',desc:'',quote:''};
  showPortraits('',name,'');
  showCastSceneInfo(name,info,idx,ordered.length);
- setHeader('在場人物','先認識今晚與死者有關的人','先閱讀大圖中的公開介紹，再繼續下一位角色。這一段的目的，是讓你在案件開始前，先建立對七名主要人物的第一印象。');
- const tip=el('article','cast-panel inline-note');
- tip.append(el('div','cast-meta','PUBLIC INTRODUCTION'));
- tip.append(el('p','',`目前顯示：${name}。請先閱讀上方主視覺中的公開介紹，再決定是否進入下一位角色。`));
- $('options').appendChild(tip);
- if(idx<ordered.length-1)option('下一位角色 →',()=>{state.castIndex=idx+1;save();render();},{primary:true});
- else option('我已了解，開始案件序章',()=>{state.castIndex=0;save();clearSceneInfo();setPhase('prologue');beginPrologue();},{primary:true});
+ setHeader('在場人物','在場人物・自我介紹','在開始調查之前，先認識今晚與死者有關的七名主要人物。讀完所有公開介紹後，再正式進入故事序章。');
+ const panel=el('article','cast-panel intro-panel');
+ panel.append(renderCastThumbStrip(name));
+ $('options').appendChild(panel);
+ if(idx<ordered.length-1)option('下一位 →',()=>{state.castIndex=idx+1;save();render();},{primary:true});
+ else option('全部讀完，開始案件序章',()=>{state.castIndex=0;save();clearSceneInfo();setPhase('prologue');beginPrologue();},{primary:true});
  auxButton('返回角色選擇',()=>frontSection('roles'));
 }
 function stageLabel(){const map={start:'準備',cast:'在場人物',prologue:'案件序章',read:'劇本閱讀',ritual:'孔神婆儀式',interview:'人物問答',public:'公開討論',search1:'第一輪搜證',searchSecret:'密室搜證',solveSecret:'密室推理',search2:'第二輪搜證',identity:'身分推理',vote:'最終投票',ending:'真相揭曉'};return map[state.phase]||state.phase;}
