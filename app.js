@@ -26,14 +26,15 @@ function frontButton(label, fn, cls=''){
  const b=el('button','front-button '+cls,label);b.type='button';b.addEventListener('click',fn);return b;
 }
 const CAST_INTROS={
- '陳聿明':{role:'陳宅主人',meta:'PUBLIC INTRODUCTION',desc:'陳家大宅的主人，平日深居簡出，性情嚴肅。宅內所有安排與明日婚禮，都由他拍板定奪。',quote:'明日是我與孟小婉的大喜之日。今晚宅內若有任何需要，儘管來找我。'},
- '東青':{role:'陳宅管家',meta:'FIXED CHARACTER · PUBLIC INTRODUCTION',desc:'年輕管家，負責陳宅日常管理、賓客接待與婚禮安排，對宅中大小事務最熟。',quote:'我是東青，負責陳宅的日常事務。近來宅中怪事頻出，若各位有需要，可以找我；只是不少房間已經閒置多年，還請不要擅自進入。'},
- '阿忠':{role:'花園園丁',meta:'PUBLIC INTRODUCTION',desc:'長年住在花園角落，沉默寡言，總戴著寬檐草帽，負責照看院中花木與後院雜務。',quote:'我平時只管花園和後院，不愛多話。若你們半夜聽見什麼動靜，也未必真是風。'},
- '戴思齊':{role:'私人醫生',meta:'PUBLIC INTRODUCTION',desc:'來自上海的西醫，每月定期為陳聿明看診，談吐斯文，對外界局勢與醫學都頗有見解。',quote:'我是戴思齊，這次來是例行問診，也順便為陳先生的婚禮道賀。若有人身體不適，可以來找我。'},
- '孟小婉':{role:'待嫁新娘',meta:'PUBLIC INTRODUCTION',desc:'即將嫁入陳宅的年輕女子，外表溫婉柔弱，近日卻因宅中的怪事顯得心神不寧。',quote:'我是孟小婉。承蒙陳先生照顧，才有了今日這門婚事……只是這幾晚我總覺得，走廊盡頭像有人在看著我。'},
- '紅豆':{role:'陳宅女傭',meta:'PUBLIC INTRODUCTION',desc:'負責廚房與日常雜務的少女，表面活潑勤快，對宅中角落與僕役往來最為熟悉。',quote:'我叫紅豆，平時就在宅裡做飯、打掃、跑腿。若各位有什麼要拿要送的，吩咐我就行。'},
- '江靜儀':{role:'《滬上日報》記者',meta:'PUBLIC INTRODUCTION',desc:'自上海而來的女記者，以採訪陳家寨舊案為由來到陳宅，說話俐落，觀察敏銳。',quote:'我是江靜儀，《滬上日報》的記者。這次來，一是參加婚禮，二是想了解當年陳家寨瘟疫的真相。'}
+ '陳聿明':{role:'陳宅主人',meta:'PUBLIC INTRODUCTION',desc:'陳家大宅的主人，四十歲上下，掌控宅中一切安排。外界對他的評價一向兩極：有人說他是行善積德、散粥濟民的鄉紳，也有人說他命帶孤煞，前幾任姨太太與親近之人都沒有好下場。這次與孟小婉的婚事，是陳宅近年來最受矚目的大事。',quote:'明日就是我的婚禮。諸位既然來了，還請在宅中安心住下；若有不周到之處，盡可直說。'},
+ '東青':{role:'陳宅管家',meta:'FIXED CHARACTER · PUBLIC INTRODUCTION',desc:'年輕管家，負責陳宅日常管理、賓客接待、婚禮安排與房間調度，對宅中出入、鑰匙、作息與規矩都最熟悉。表面謹慎守禮，做事井井有條，是目前陳宅最能穩住場面的人物之一。',quote:'我是東青，平日替老爺打理宅務、照應諸位起居。近來宅中怪事頻出，若各位夜裡聽見異響，也請先來告知我，不要擅自闖入上鎖的房間。'},
+ '阿忠':{role:'花園園丁',meta:'PUBLIC INTRODUCTION',desc:'長年住在花園棚屋的園丁，寡言沉默，總戴著寬檐草帽，負責照看花木、修剪枝葉與搬運粗重雜務。雖然存在感不高，卻經常出沒於庭院、後門、工具間與偏僻角落，因此也比旁人更熟悉宅中那些不被注意的地方。',quote:'我平時只管花園和後院，不愛摻和屋裡的事。若你們半夜聽見什麼動靜，也未必都是風。'},
+ '戴思齊':{role:'私人醫生',meta:'PUBLIC INTRODUCTION',desc:'來自上海的西醫，年輕斯文，談吐理性，近來會定期到陳宅為陳聿明看診。由於受過新式醫學教育，他對疾病、藥物與外界局勢都頗有見解，在這座迷信與怪談交錯的宅院裡，顯得格外冷靜。',quote:'我是戴思齊，這次來一是例行替陳先生診察身體，二也是順道參加婚禮。若今晚有人身體不適，或對宅中的怪事感到不安，都可以來找我。'},
+ '孟小婉':{role:'待嫁新娘',meta:'PUBLIC INTRODUCTION',desc:'即將嫁入陳宅的年輕女子，年紀尚輕，氣質溫婉，看起來柔弱安靜。她的婚事是今晚所有準備的中心，然而近來宅中的怪談與深夜異象，似乎讓她始終無法真正安心。',quote:'我是孟小婉。承蒙陳先生照顧，才有了今日這門婚事……只是這幾晚我總覺得，走廊盡頭像有人在看著我，越到夜裡，心裡越發不踏實。'},
+ '紅豆':{role:'陳宅女傭',meta:'PUBLIC INTRODUCTION',desc:'陳宅內負責廚房、打掃與跑腿的年輕女傭，表面上爽快勤快，與宅中每個人幾乎都有接觸。她經常在廚房、走廊、偏房與各個雜物處之間穿梭，因此對僕役間的細碎消息、房間擺設與日常變化最為敏感。',quote:'我叫紅豆，平時就在宅裡做飯、打掃、跑腿。各位若有什麼要拿要送的，儘管吩咐我；只是這幾天宅裡怪得很，有些地方連我都不太想靠近。'},
+ '江靜儀':{role:'《滬上日報》記者',meta:'PUBLIC INTRODUCTION',desc:'自上海而來的女記者，以採訪陳家寨舊案為由來到陳宅。她觀察敏銳，說話俐落，不像一般賓客那樣只為婚禮而來，而是對陳宅過去的火災、失蹤案與瘟疫傳聞抱持強烈興趣。',quote:'我是江靜儀，《滬上日報》的記者。這次來，一是參加婚禮，二是想了解當年陳家寨瘟疫與陳宅舊案的真相。若真相仍被藏著，那總得有人把它挖出來。'}
 };
+
 function frontSection(view){
  frontView=view;
  const f=$('frontScreen');
@@ -109,6 +110,27 @@ function el(tag,cls,txt){const x=document.createElement(tag);if(cls)x.className=
 function clear(node){node.replaceChildren();}
 function message(msg){const x=$('toast');x.textContent=msg;x.classList.add('show');setTimeout(()=>x.classList.remove('show'),2800);}
 function setHeader(kicker,title,desc){$('sectionKicker').textContent=kicker;$('sectionTitle').textContent=title;$('sectionDesc').textContent=desc||'';clear($('options'));clear($('aux'));}
+function sceneInfoBox(){
+ let box=$('sceneInfoBox');
+ if(!box){box=el('div','scene-info-box');box.id='sceneInfoBox';$('scene').appendChild(box);}
+ return box;
+}
+function clearSceneInfo(){
+ const box=sceneInfoBox();
+ box.hidden=true;box.className='scene-info-box';box.replaceChildren();
+}
+function showCastSceneInfo(name,info,idx,total){
+ const box=sceneInfoBox();
+ box.hidden=false;box.className='scene-info-box cast-scene-box';
+ clear(box);
+ const meta=el('div','cast-scene-meta',info.meta||'PUBLIC INTRODUCTION');
+ const nm=el('div','cast-scene-name',name);
+ const role=el('div','cast-scene-role',info.role||'');
+ const desc=el('p','cast-scene-desc',info.desc||'');
+ const quote=el('div','cast-scene-quote',info.quote||'');
+ const count=el('div','cast-scene-count',`${String(idx+1).padStart(2,'0')} / ${String(total).padStart(2,'0')}`);
+ box.append(meta,nm,role,desc,quote,count);
+}
 function option(label,fn,{primary=false,sub=''}={}){const b=el('button','option'+(primary?' primary':''));b.type='button';b.append(document.createTextNode(label));if(sub)b.appendChild(el('small','',sub));b.addEventListener('click',fn);$('options').appendChild(b);return b;}
 function auxButton(label,fn){const b=el('button','',label);b.type='button';b.addEventListener('click',fn);$('aux').appendChild(b);return b;}
 function hideDialogue(){
@@ -172,18 +194,15 @@ function renderCastIntro(){
  const idx=Math.max(0,Math.min(state.castIndex||0,ordered.length-1));
  const name=ordered[idx];
  const info=CAST_INTROS[name]||{role:V.labels[name]||'',meta:'PUBLIC INTRODUCTION',desc:'',quote:''};
- showPortraits('',name,name);
- setHeader('在場人物','先認識今晚與死者有關的人','在開始調查之前，先認識今夜陳宅的七名主要人物。讀完所有人的公開介紹後，再正式進入故事序章。');
- const panel=el('article','cast-panel');
- panel.append(el('div','cast-meta',info.meta));
- panel.append(el('div','cast-name',name));
- panel.append(el('div','cast-role',info.role));
- panel.append(el('p','',info.desc));
- panel.append(el('div','cast-quote',info.quote));
- const prog=el('p','muted',`${String(idx+1).padStart(2,'0')} / ${String(ordered.length).padStart(2,'0')}`);panel.append(prog);
- $('options').appendChild(panel);
+ showPortraits('',name,'');
+ showCastSceneInfo(name,info,idx,ordered.length);
+ setHeader('在場人物','先認識今晚與死者有關的人','先閱讀大圖中的公開介紹，再繼續下一位角色。這一段的目的，是讓你在案件開始前，先建立對七名主要人物的第一印象。');
+ const tip=el('article','cast-panel inline-note');
+ tip.append(el('div','cast-meta','PUBLIC INTRODUCTION'));
+ tip.append(el('p','',`目前顯示：${name}。請先閱讀上方主視覺中的公開介紹，再決定是否進入下一位角色。`));
+ $('options').appendChild(tip);
  if(idx<ordered.length-1)option('下一位角色 →',()=>{state.castIndex=idx+1;save();render();},{primary:true});
- else option('我已了解，開始案件序章',()=>{state.castIndex=0;save();setPhase('prologue');beginPrologue();},{primary:true});
+ else option('我已了解，開始案件序章',()=>{state.castIndex=0;save();clearSceneInfo();setPhase('prologue');beginPrologue();},{primary:true});
  auxButton('返回角色選擇',()=>frontSection('roles'));
 }
 function stageLabel(){const map={start:'準備',cast:'在場人物',prologue:'案件序章',read:'劇本閱讀',ritual:'孔神婆儀式',interview:'人物問答',public:'公開討論',search1:'第一輪搜證',searchSecret:'密室搜證',solveSecret:'密室推理',search2:'第二輪搜證',identity:'身分推理',vote:'最終投票',ending:'真相揭曉'};return map[state.phase]||state.phase;}
@@ -194,7 +213,7 @@ function updateHeader(){
  $('clueCount').textContent=`${(state.publicClues||[]).length} 張公開`;
  $('readerButton').disabled=!state.player;
 }
-function render(){updateHeader();document.querySelector('.play-area').classList.toggle('choice-mode',state.phase==='interview'&&!!state.interviewTarget);if(queue.length)return;
+function render(){updateHeader();document.querySelector('.play-area').classList.toggle('choice-mode',state.phase==='interview'&&!!state.interviewTarget);if(state.phase!=='cast')clearSceneInfo();if(queue.length)return;
  switch(state.phase){
  case 'start':return renderStart();
  case 'cast':return renderCastIntro();
