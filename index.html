@@ -4,11 +4,12 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="theme-color" content="#161411" />
-<title>紙妻｜免 Token V6.6</title>
-<link rel="stylesheet" href="style.css?v=6.6" />
-<script defer src="data/game-data.js?v=6.6"></script>
-<script defer src="data/visual-data.js?v=6.6"></script>
-<script defer src="app.js?v=6.6"></script>
+<title>紙妻｜免 Token V6.7</title>
+<link rel="stylesheet" href="style.css?v=6.7" />
+<link rel="stylesheet" href="reference-ui.css?v=6.7" />
+<script defer src="data/game-data.js?v=6.7"></script>
+<script defer src="data/visual-data.js?v=6.7"></script>
+<script defer src="app.js?v=6.7"></script>
 </head>
 <body>
 <div class="front-screen" id="frontScreen" hidden>
@@ -26,7 +27,14 @@
  <main class="play-area">
   <div class="scene" id="scene">
    <div class="scene-vignette"></div>
+   <div class="ref-scene-toolbar">
+    <button id="recordOpen" type="button">▤　公開情報</button>
+    <button id="talkOpen" type="button">◎　公開問答</button>
+    <button id="noteOpen" type="button">▣　推理筆記</button>
+    <button id="theaterHome" type="button">⌂　選擇劇本</button>
+   </div>
    <div class="scene-top"><span id="sceneTag">清河縣 · 陳宅</span><span id="sceneProgress">序章</span></div>
+   <div id="castPageHeading" class="ref-cast-page-heading" hidden>在場人物・自我介紹</div><div id="castPageCount" class="ref-cast-page-count" hidden>01 / 07</div>
    <div class="portrait portrait-left" id="leftPortrait" aria-hidden="true"><img class="portrait-image" alt="" draggable="false" /><div class="portrait-label" id="leftName"></div></div>
    <div class="portrait portrait-right" id="rightPortrait" aria-hidden="true"><img class="portrait-image" alt="" draggable="false" /><div class="portrait-label" id="rightName"></div></div>
    <div class="scene-center" id="sceneCenter"><span class="scene-ornament">❖</span><h1>紙妻</h1><p>霧鎖陳宅，真相從未沉睡</p></div>
@@ -42,8 +50,9 @@
    <div class="aux" id="aux"></div>
   </section>
  </main>
+ <div class="record-backdrop" id="recordBackdrop"></div>
  <aside class="sidebar" aria-label="遊戲紀錄">
-  <div class="side-head"><div><div class="eyebrow">調查手冊</div><h3>公開情報</h3></div><span id="clueCount" class="count">0 張</span></div>
+  <div class="side-head"><div><div class="eyebrow">調查手冊</div><h3>公開情報</h3></div><span id="clueCount" class="count">0 張</span><button id="recordClose" type="button" aria-label="關閉情報面板">×</button></div>
   <div class="side-tabs"><button id="tabClue" type="button" class="active">提示卡</button><button id="tabTalk" type="button">公開問答</button><button id="tabNote" type="button">我的筆記</button></div>
   <div id="sideContent" class="side-content"><p class="empty">隨遊戲推進，已取得的線索才會出現在此。</p></div>
   <footer class="side-foot">所有已獲得的情報會保存在此瀏覽器。請勿在網頁原始碼查看後幕內容，以免劇透。</footer>

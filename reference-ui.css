@@ -1,0 +1,158 @@
+/* V6.7 — visual reconstruction from the six-frame user reference.
+   Preserve the V6 game engine, story, clues and dialogue state. */
+:root{--gold:#e0bd7c;--gold2:#aa7b43;--cream:#f6e8cf;--edge:rgba(211,165,100,.68);--ink:#f0e2cf}
+html,body{margin:0;min-height:100%;overflow-x:hidden;background:#0b0b10;color:var(--ink)}
+button{font-family:inherit}button:focus-visible{outline:2px solid #f7c879;outline-offset:3px}
+/* No duplicate art card. Single reference-like full-bleed hero. */
+.front-screen,.front-hero{min-height:100svh}
+.front-hero{background-size:cover;background-position:50% center;background-repeat:no-repeat}
+.front-home{background-image:linear-gradient(90deg,rgba(5,5,12,.78) 0%,rgba(6,7,15,.32) 42%,rgba(5,6,12,.08) 70%),url('assets/scene/hero.webp')!important;background-position:center 39%}
+.front-case,.front-role{background-image:linear-gradient(90deg,rgba(5,5,12,.84),rgba(6,5,13,.87)),url('assets/scene/chen_exterior.webp')!important}
+.front-shade{background:linear-gradient(to bottom,rgba(9,7,13,.2),transparent 44%,rgba(4,3,8,.5))}
+.front-inner{max-width:none;width:100%;min-height:100svh;padding:clamp(24px,3.4vw,60px);display:block!important}
+.ref-home-copy{position:absolute;z-index:4;left:clamp(32px,5vw,105px);top:12%;width:min(40vw,550px);color:#f9ecd6;text-shadow:0 2px 14px rgba(0,0,0,.9)}
+.ref-home-brow{font-size:clamp(11px,1vw,16px);letter-spacing:.35em;color:#e5be7e;margin:0 0 16px}
+.ref-home-title{font-family:"DFKai-SB","Kaiti TC","STKaiti",serif;font-weight:400;font-size:clamp(76px,9.3vw,168px);letter-spacing:.09em;margin:0 0 5px;line-height:1.15}
+.ref-home-subtitle{font-size:clamp(14px,1.3vw,21px);color:#d8b67a;letter-spacing:.23em;margin:0 0 24px}
+.ref-home-summary{font-size:clamp(14px,1.14vw,20px);white-space:pre-line;line-height:2;max-width:520px;color:#e9d8c1;margin:0 0 30px}
+.ref-home-actions{display:flex;flex-wrap:wrap;gap:12px}
+.ref-home-actions .front-button{background:rgba(21,14,15,.78);color:#f2d6a8;border:1px solid #be9258;font-size:clamp(13px,1vw,16px);min-width:130px;padding:11px 20px;min-height:44px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.42)}
+.ref-home-actions .gold-button{background:linear-gradient(100deg,#793b31,#52221f)!important;border-color:#d7a16a;color:#ffe4bc}
+/* CASE page: centered headline above one large horizontal card */
+.ref-case-library{position:relative;max-width:1180px;margin:0 auto;min-height:calc(100svh - 100px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+.ref-case-library>.front-eyebrow{color:#d7b77a;letter-spacing:.26em;margin:0 0 6px;text-align:center}
+.ref-case-library>.front-section-title{color:#f7e6c8;font-size:clamp(34px,3.6vw,60px);font-weight:500;letter-spacing:.12em;text-align:center;margin:0 0 8px}
+.ref-case-library>.front-muted{text-align:center;font-size:16px;color:#d6b68b;margin:0 0 34px}
+.ref-case-card{position:relative;display:grid!important;grid-template-columns:42% 1fr!important;gap:22px;padding:16px;max-width:1080px;width:100%;min-height:340px;border:1px solid #c19660;background:rgba(17,13,16,.92);box-shadow:0 18px 65px rgba(0,0,0,.7);border-radius:6px}
+.ref-case-card::before,.ref-case-card::after{content:'◆';position:absolute;color:#b88a50;font-size:12px;top:-8px}
+.ref-case-card::before{left:14px}.ref-case-card::after{right:14px}
+.ref-case-cover{width:100%;height:100%;min-height:306px;object-fit:cover;border:1px solid #705c49;box-shadow:inset 0 0 20px #000}
+.ref-case-info{position:relative;display:flex;flex-direction:column;justify-content:center;padding:24px 32px 12px 10px}
+.ref-case-info h3{color:#f4e3c9;line-height:1.15;letter-spacing:.18em;font-weight:500;font-size:clamp(38px,4vw,66px);margin:0 0 8px}
+.ref-case-era{color:#c4a175;font-size:13px;margin:0 0 16px}
+.ref-case-story{font-size:clamp(15px,1.14vw,19px);line-height:2;color:#e9ddca;margin:0 0 14px;max-width:620px}
+.ref-case-facts{border-top:1px solid #62513e;padding-top:16px;color:#d7b16f;font-size:clamp(12px,1vw,16px);letter-spacing:.045em}
+.ref-case-status{position:absolute;right:18px;top:9px;font-size:13px;letter-spacing:.12em;color:#f6d0a9;background:#6b2e31;padding:5px 14px;border:1px solid #ad5844;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,8px 50%)}
+.ref-case-go{align-self:flex-end;padding:4px 0!important;background:transparent!important;border:0!important;color:#dcb87d!important;font-size:15px!important}
+.ref-small-back{align-self:center;margin-top:23px;padding:8px 14px;background:rgba(15,12,13,.6);border:1px solid #796243;color:#e6c08b;font-size:13px}
+/* Role cards — a horizontal row of seven distinct faces. */
+.ref-role-library{max-width:1440px;margin:0 auto;min-height:calc(100svh - 90px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 0}
+.ref-role-library>.front-section-title{font-size:clamp(36px,3.5vw,62px);margin:0 0 7px;color:#f5e4cb}
+.ref-role-library>.front-eyebrow{font-size:12px;margin:0 0 8px;color:#d9bd88}
+.ref-role-library>.front-muted{text-align:center;margin:0 0 26px;color:#d7bf9b;font-size:15px}
+.ref-role-grid{width:100%;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:clamp(8px,1vw,18px)}
+.ref-role-card{position:relative;border:1px solid #7b593b;padding:7px;background:#0c0a0c;border-radius:0;min-height:0;transition:transform .2s,border-color .2s,box-shadow .2s}
+.ref-role-card:hover,.ref-role-card.selected{border-color:#e9bb76;box-shadow:0 0 0 2px rgba(209,162,90,.25),0 0 30px rgba(184,116,42,.15);transform:translateY(-3px)}
+.ref-role-image{width:100%;aspect-ratio:3/4.7;object-fit:contain;object-position:center bottom;background:linear-gradient(165deg,#26212b,#11131c 75%,#27202a);display:block;border:1px solid rgba(204,172,126,.25)}
+.ref-role-name{text-align:center;color:#f0ddbd;background:rgba(15,10,10,.92);font-size:clamp(13px,1.15vw,20px);letter-spacing:.07em;padding:10px 0 6px}
+.ref-role-actions{display:flex;justify-content:center;gap:clamp(12px,3vw,60px);margin-top:28px;flex-wrap:wrap}
+.ref-role-actions .front-button{min-width:215px;border:1px solid #ae854f;background:rgba(21,13,13,.83);color:#dfc091;font-size:16px;padding:13px 28px}
+.ref-role-actions .ref-role-confirm{color:#ffdfca;border-color:#ce7f6b;background:linear-gradient(105deg,#752e31,#542123)}
+/* STORY — fullscreen theater, no wide black app header, no fixed side column. */
+#app{position:relative;min-height:100svh;overflow:hidden}
+#app>.topbar{position:absolute;top:0;left:0;right:0;z-index:20;height:0;min-height:0;padding:0;background:transparent;border:0;overflow:visible}
+#app>.topbar .brand{display:none}
+#app>.topbar .topactions{display:none}
+.layout{display:block;max-width:none;min-height:100svh;margin:0}
+.play-area{position:relative;min-height:100svh!important;padding:0!important;background:#0b0d12!important}
+.scene{height:100svh!important;min-height:660px!important;max-height:none!important;margin:0!important;border:0!important;background-size:cover!important;background-position:center center!important;overflow:hidden}
+.scene-vignette{background:linear-gradient(0deg,rgba(7,5,10,.6),transparent 35%,rgba(5,7,13,.12)),radial-gradient(ellipse at 48% 40%,transparent 42%,rgba(8,5,12,.44) 100%)}
+.scene-top{top:16px;left:24px;right:24px;z-index:10;font-size:12px;letter-spacing:.1em;display:flex}
+.scene-top span{background:transparent!important;padding:0!important;color:#f2d28b}
+.ref-scene-toolbar{position:absolute;top:15px;right:20px;display:flex;gap:7px;z-index:19}
+.ref-scene-toolbar button{border:1px solid #836746;border-radius:20px;background:rgba(17,12,14,.76);color:#f1d7a2;min-height:32px;padding:5px 13px;font-size:12px;letter-spacing:.04em;white-space:nowrap}
+.ref-scene-toolbar button:hover{background:#4b3227}
+.scene-top #sceneProgress{display:none}
+.portrait{z-index:3!important;bottom:9.5%!important;width:37%!important;height:81%!important;max-width:580px!important;opacity:0;filter:none!important;transition:filter .2s,opacity .2s}
+.portrait-left{left:0!important}.portrait-right{right:0!important}
+.portrait.visible{opacity:1!important}
+.portrait.active{filter:drop-shadow(0 8px 19px rgba(0,0,0,.7)) brightness(1.04)!important}
+.portrait.dimmed{filter:grayscale(.56) brightness(.49)!important;opacity:.83!important}
+.portrait-image{height:100%;width:100%;object-fit:contain!important;object-position:center bottom!important;mask-image:none!important;-webkit-mask-image:none!important}
+.portrait-right .portrait-image{transform:none!important}
+.portrait-label{bottom:0!important;left:50%;background:rgba(13,10,12,.9);border:1px solid #c09b61;color:#f8dfb1;font-size:16px;letter-spacing:.16em;padding:9px 19px}
+.portrait-right .portrait-label{transform:translateX(-50%) scaleX(-1)}
+.scene-center{display:none!important}
+/* Cast introduction layout: portrait left, text right, NEXT at bottom of card. */
+body[data-phase="cast"] .portrait-left{left:3%!important;width:48%!important;bottom:0!important;height:88%!important;max-width:700px!important}
+body[data-phase="cast"] .portrait-label{display:none}
+body[data-phase="cast"] .scene{background-position:center center!important}
+body[data-phase="cast"] .scene-info-box.cast-scene-box{position:absolute!important;top:50%!important;left:auto!important;right:5%!important;bottom:auto!important;transform:translateY(-47%)!important;width:42%!important;max-width:690px!important;padding:34px 34px 22px!important;border:1px solid #ab895f!important;background:linear-gradient(115deg,rgba(15,11,14,.96),rgba(28,19,21,.92))!important;box-shadow:0 25px 65px rgba(0,0,0,.58)!important;z-index:8!important;max-height:76vh;overflow-y:auto}
+.cast-scene-meta{color:#d9b477;font-size:13px;letter-spacing:.2em;margin-bottom:10px}
+.cast-scene-name{font-size:clamp(36px,3.5vw,64px);line-height:1.12;margin:0 0 5px}
+.cast-scene-role{color:#dfb678;font-size:20px;margin-bottom:14px}
+.cast-scene-desc{font-size:clamp(14px,1.15vw,18px);line-height:1.95;color:#ead9c4;margin:0 0 12px}
+.cast-scene-quote{background:rgba(125,87,49,.12);border-left:2px solid #d1aa74;padding:15px 16px;line-height:2;color:#e6d1b3;font-size:clamp(13px,1.06vw,17px)}
+.cast-scene-count{display:inline-block;margin-top:20px;border-top:1px solid #5a4638;width:100%;padding-top:15px;color:#d2ae75}
+.cast-scene-next{float:right;margin-top:-28px;border:1px solid #d7b47c;padding:12px 22px;color:#211911;background:linear-gradient(110deg,#e9ca91,#c49d65);font-size:15px}
+/* Hide old lower panel for cast and narrative playback. */
+body[data-phase="cast"] .control-panel{display:none!important}
+body.has-dialogue .control-panel{display:none!important}
+/* Story setup panels appear near bottom and never consume viewport height. */
+body:not([data-phase="cast"]) .play-area:not(.choice-mode)>.control-panel{position:absolute!important;left:7%!important;right:7%!important;bottom:24px!important;margin:0!important;min-height:0!important;z-index:8!important;max-height:38vh!important;overflow:auto;background:linear-gradient(105deg,rgba(13,11,14,.97),rgba(25,17,19,.93))!important;border:1px solid #a88a60!important;padding:20px 25px!important;box-shadow:0 15px 45px rgba(0,0,0,.6)}
+.control-panel h2{font-weight:500;color:#efdbb5}
+.control-panel .option{border:1px solid #a5885d;background:linear-gradient(120deg,#2d211c,#1a1514);color:#f0dcbd;min-height:50px}
+/* Narration/dialogue bottom box as on reference. */
+.dialogue{position:absolute!important;left:6%!important;right:6%!important;bottom:24px!important;min-height:158px!important;max-width:none!important;padding:20px 30px 22px!important;z-index:14!important;margin:0!important;border:1px solid #bd9363!important;background:linear-gradient(100deg,rgba(14,10,14,.97),rgba(29,19,20,.95))!important;box-shadow:0 20px 45px #0008}
+.dialogue .speaker{font-size:18px;letter-spacing:.12em;color:#e4b46f}
+.dialogue p{font-size:clamp(15px,1.25vw,20px);min-height:54px;line-height:1.9;color:#f0e2d3}
+.next{color:#f0c680;bottom:16px;right:22px}
+/* Q&A choices are centered between the two characters, no section title billboard. */
+.play-area.choice-mode>.control-panel{position:absolute!important;z-index:9!important;top:15%!important;left:50%!important;right:auto!important;bottom:auto!important;width:min(38%,560px)!important;max-height:58vh!important;overflow:auto!important;transform:translateX(-50%)!important;margin:0!important;padding:12px 13px!important;background:rgba(11,8,12,.12)!important;border:0!important;box-shadow:none!important}
+.play-area.choice-mode .control-panel .eyebrow{display:none!important}
+.play-area.choice-mode .control-panel h2{font-size:19px!important;text-align:center;margin:0 0 12px!important;color:#f6dfbc;text-shadow:0 2px 9px #000}
+.play-area.choice-mode .control-panel .section-desc{display:none!important}
+.play-area.choice-mode .options{display:flex!important;flex-direction:column!important;gap:11px!important;max-height:none!important;overflow:visible!important}
+.play-area.choice-mode .option{font-size:clamp(13px,1vw,17px)!important;text-align:center!important;min-height:58px!important;padding:12px 16px!important;border:1px solid #c3a071!important;color:#f1dfbf!important;background:linear-gradient(105deg,rgba(25,16,17,.95),rgba(29,22,21,.94))!important;box-shadow:0 8px 21px #0008}
+.play-area.choice-mode .aux{display:none}
+body.has-dialogue .play-area.choice-mode>.control-panel{display:none!important}
+/* Sidebar is a pull-out record drawer, not a permanent page column. */
+.record-backdrop{display:none;position:fixed;inset:0;background:rgba(1,1,5,.55);z-index:29}
+.sidebar{position:fixed!important;top:0!important;right:0!important;bottom:0!important;width:min(440px,100vw)!important;max-height:none!important;z-index:30!important;transform:translateX(105%);transition:transform .24s;box-shadow:-16px 0 45px #0009;background:#141114!important;display:flex!important}
+#app.record-open .sidebar{transform:translateX(0)}
+#app.record-open .record-backdrop{display:block}
+#recordClose{font-size:28px;line-height:1;width:36px;height:36px;border:1px solid #69563c;color:#e7c390;background:transparent}
+.side-content{overflow:auto}
+/* Small viewport adaptations */
+@media(max-width:1100px){
+ .ref-role-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .ref-role-library{justify-content:flex-start}
+ .ref-case-card{grid-template-columns:38% 1fr!important}
+ body[data-phase="cast"] .scene-info-box.cast-scene-box{width:50%!important;right:2%!important}
+ .portrait{width:43%!important}
+ .play-area.choice-mode>.control-panel{width:46%!important}
+}
+@media(max-width:700px){
+ .ref-home-copy{width:90%;left:5%;top:8%}.ref-home-title{font-size:75px}.ref-home-summary{font-size:14px;line-height:1.8}
+ .front-home{background-position:65% center}.front-inner{padding:18px 14px}
+ .ref-case-library{justify-content:flex-start;padding-top:15vh}
+ .ref-case-card{grid-template-columns:1fr!important}.ref-case-cover{height:200px;min-height:200px}.ref-case-info{padding:8px 15px 15px}
+ .ref-role-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .ref-role-library{min-height:100vh;padding-top:5vh}.ref-role-image{aspect-ratio:3/4}
+ .ref-scene-toolbar{top:43px;right:8px;gap:4px;flex-wrap:wrap;max-width:95%;justify-content:flex-end}
+ .ref-scene-toolbar button{font-size:10px;padding:5px 7px}
+ .scene-top{left:10px;top:12px}
+ .scene{min-height:100svh!important}
+ .portrait{bottom:20%!important;height:60%!important;width:52%!important}
+ body[data-phase="cast"] .portrait-left{height:52%!important;width:65%!important;left:-17%!important;bottom:35%!important}
+ body[data-phase="cast"] .scene-info-box.cast-scene-box{top:auto!important;bottom:8%!important;left:3%!important;right:3%!important;transform:none!important;width:94%!important;max-height:53vh!important;padding:16px!important}
+ .cast-scene-name{font-size:30px}.cast-scene-desc{font-size:13px;line-height:1.7}.cast-scene-quote{font-size:13px;line-height:1.7;padding:8px}.cast-scene-role{font-size:15px}
+ .play-area.choice-mode>.control-panel{width:94%!important;top:32%!important}
+ .dialogue{left:3%!important;right:3%!important;bottom:10px!important;min-height:158px!important;padding:15px!important}.dialogue p{font-size:15px}
+ body:not([data-phase="cast"]) .play-area:not(.choice-mode)>.control-panel{left:3%!important;right:3%!important;bottom:10px!important;padding:16px!important;max-height:43vh!important}
+ .options{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){.portrait,.sidebar,.ref-role-card{transition:none}}
+/* Cast footer interaction: avoid overlap between counter and continue button. */
+.cast-scene-count{width:auto!important;display:inline-block!important;min-width:110px;border-top:0!important;padding-top:0!important;margin-top:18px!important;vertical-align:middle!important}
+.cast-scene-next{float:none!important;display:inline-block!important;margin:14px 0 0 auto!important;position:relative!important;z-index:12!important;vertical-align:middle!important}
+body[data-phase="cast"] .scene-info-box.cast-scene-box{display:block!important}
+
+.portrait:not(.visible){opacity:0!important;filter:none!important}
+.ref-role-image{filter:brightness(1.18) contrast(1.04)}
+
+.ref-cast-page-heading{position:absolute;top:32px;left:50%;transform:translateX(-50%);z-index:14;color:#f4dfbe;font-size:clamp(22px,2.2vw,36px);letter-spacing:.13em;text-shadow:0 3px 12px #000;font-weight:500;white-space:nowrap}
+.ref-cast-page-count{position:absolute;top:40px;right:25px;z-index:14;color:#dec08c;font-size:13px;letter-spacing:.18em}
+body[data-phase="cast"] .ref-scene-toolbar{top:auto;bottom:12px;right:16px}
+body[data-phase="cast"] .scene-top{top:15px}
+@media(max-width:700px){.ref-cast-page-heading{top:88px;font-size:22px}.ref-cast-page-count{top:109px;right:12px}}

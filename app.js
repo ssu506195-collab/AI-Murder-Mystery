@@ -1,5 +1,5 @@
 'use strict';
-/* 紙妻 V6.6｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
+/* 紙妻 V6.7｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
 const D = window.PAPERWIFE_DATA;
 const V = window.PAPERWIFE_VISUALS || {portraits:{},labels:{},caseCatalog:[]};
 if (!D) throw new Error('未載入遊戲資料：請確認 data/game-data.js 已上傳。');
@@ -47,93 +47,63 @@ function frontSection(view){
  if(view==='home')renderHome(pane);else if(view==='cases')renderCases(pane);else if(view==='roles')renderRoleSelect(pane);
 }
 function renderHome(pane){
- const shell=el('section','landing-shell');
- const intro=el('div','landing-copy');
- intro.append(el('div','front-eyebrow','INTERACTIVE MURDER MYSTERY'));
- intro.append(el('h1','landing-title','劇本殺'));
- intro.append(el('p','landing-subtitle','沉浸式單人推理體驗'));
- intro.append(el('p','landing-summary','從閱讀劇本，走進扮演角色，再到公開問答、搜證推理與最終投票——你不只是旁觀者，而是故事中的其中一人。每一句證詞、每一張提示卡、每一次追問，都可能左右你對兇手與真相的判斷。'));
- const actions=el('div','landing-actions');
+ const copy=el('section','ref-home-copy');
+ copy.append(el('div','ref-home-brow','✦　互動式懸疑劇本殺'));
+ copy.append(el('h1','ref-home-title','劇本殺'));
+ copy.append(el('p','ref-home-subtitle','沉浸式推理・互動劇本遊戲'));
+ copy.append(el('p','ref-home-summary','這不僅是一場遊戲。\n而是一次身臨其境的推理體驗。\n你將穿越時空，化身故事中的一員，\n在謎言與真相交織的劇情中，\n透過線索與證詞，抽絲剝繭，找出隱藏的兇手。'));
+ const actions=el('div','ref-home-actions');
  actions.append(frontButton('開始遊戲',()=>frontSection('cases'),'gold-button'));
  actions.append(frontButton('劇本列表',()=>frontSection('cases'),'outline-button'));
- if(state.player) actions.append(frontButton('繼續上次進度',()=>{frontSection('play');render();},'outline-button'));
- intro.append(actions);
- intro.append(el('div','landing-foot','免 Token・繁體中文・單人完整遊玩版'));
- const art=el('div','landing-art');
- const img=el('img','landing-art-image');img.src='assets/scene/hero.webp';img.alt='紙妻主要角色群像';art.append(img);
- shell.append(intro,art);
- pane.append(shell);
+ if(state.player)actions.append(frontButton('繼續遊戲',()=>{frontSection('play');render();},'outline-button'));
+ copy.append(actions);pane.append(copy);
 }
 function renderCases(pane){
- const shell=el('section','selection-shell');
- const head=el('div','selection-head');
- head.append(frontButton('← 返回首頁',()=>frontSection('home'),'text-button'));
- const titles=el('div','selection-titles');
- titles.append(el('div','front-eyebrow','CHOOSE YOUR CASE'));
- titles.append(el('h2','front-section-title','選擇劇本'));
- titles.append(el('p','front-muted','請選擇你想體驗的劇本。每部劇本都會標示故事簡介、角色人數與預估遊玩時間。'));
- head.append(titles);
- shell.append(head);
- const grid=el('div','case-gallery');
+ const area=el('section','ref-case-library');
+ area.append(el('div','front-eyebrow','CHOOSE YOUR CASE'));
+ area.append(el('h2','front-section-title','選擇劇本'));
+ area.append(el('p','front-muted','請選擇你想遊玩的劇本'));
  for(const c of V.caseCatalog){
-   const card=el('article','case-card featured-case');
-   const coverWrap=el('div','case-cover-wrap');
-   const cover=el('img','case-cover');cover.src=c.cover;cover.alt=c.title+' 劇本封面';coverWrap.append(cover);
-   const info=el('div','case-info');
-   info.append(el('div','front-eyebrow',c.category));
-   info.append(el('h3','',c.title));
-   info.append(el('p','case-pitch',c.subtitle));
-   info.append(el('p','case-spec',`角色人數：${c.players||'7 人劇本'}　　遊玩時間：${c.duration||'約 4–6 小時'}`));
-   const actions=el('div','case-actions');
-   actions.append(frontButton('進行中 →',()=>{if(c.available)frontSection('roles');},'gold-button'));
-   info.append(actions);
-   card.append(coverWrap,info);grid.append(card);
+  const card=el('article','ref-case-card');
+  const cover=el('img','ref-case-cover');cover.src=c.cover;cover.alt=c.title+' 劇本封面';card.append(cover);
+  const info=el('div','ref-case-info');
+  const status=el('span','ref-case-status','進行中');info.append(status);
+  info.append(el('h3','',c.title));info.append(el('p','ref-case-era',c.category));
+  info.append(el('p','ref-case-story',c.subtitle));
+  info.append(el('p','ref-case-facts',`♟　角色人數：${c.players||'7 人劇本'}　 ◷　預估遊玩時間：${c.duration||'約 4–6 小時'}`));
+  const go=frontButton('選擇《'+c.title+'》  ›',()=>{if(c.available)frontSection('roles');},'ref-case-go');info.append(go);
+  card.append(info);area.append(card);
  }
- shell.append(grid);
- pane.append(shell);
+ area.append(frontButton('← 返回首頁',()=>frontSection('home'),'ref-small-back'));
+ pane.append(area);
 }
 function renderRoleSelect(pane){
  clear(pane);
- const shell=el('section','selection-shell');
- const head=el('div','selection-head');
- head.append(frontButton('← 返回劇本選擇',()=>frontSection('cases'),'text-button'));
- const titles=el('div','selection-titles');
- titles.append(el('div','front-eyebrow','YOUR SECRET IDENTITY'));
- titles.append(el('h2','front-section-title','決定你的角色'));
- titles.append(el('p','front-muted','你將成為七名涉案角色之一。每位角色都有自己的秘密、任務與立場；確認身分後，會先進入在場人物自我介紹，再正式開始劇情。'));
- head.append(titles);
- shell.append(head);
- const box=el('div','role-selection-box');
- const modes=el('div','role-modes');
- const choose=frontButton('自行選擇角色',()=>{randomRoleMode=false;renderRoleSelect(pane);},!randomRoleMode?'mode-current':'');
- const random=frontButton('隨機分配角色',()=>{randomRoleMode=true;renderRoleSelect(pane);},randomRoleMode?'mode-current':'');
- modes.append(choose,random);box.append(modes);
- const grid=el('div','role-grid');
- D.roles.forEach((name)=>{
-   const b=el('button','role-card'+(selectedRole===name&&!randomRoleMode?' selected':''));
-   b.type='button';
-   const img=el('img','role-portrait');img.src=V.portraits[name]||'';img.alt=name+' 角色立繪';
-   const info=el('div','role-card-info');
-   info.append(el('div','role-name',name));
-   info.append(el('div','role-tag',V.labels[name]||''));
-   b.append(img,info);
-   b.addEventListener('click',()=>{selectedRole=name;randomRoleMode=false;renderRoleSelect(pane);});
-   grid.append(b);
- });
- box.append(grid);
- const footer=el('div','role-bottom');
- footer.append(frontButton('我，想扮演這個角色',()=>{
-   const role=randomRoleMode?D.roles[Math.floor(Math.random()*D.roles.length)]:selectedRole;
-   if(!confirm('確定開始扮演「'+role+'」嗎？此操作會覆蓋目前的遊戲進度。'))return;
-   state=newState();state.player=role;state.phase='cast';state.castIndex=0;save();frontSection('play');render();
- },'gold-button'));
- if(randomRoleMode) footer.append(el('div','role-hint',`系統將在 ${D.roles.length} 位角色中隨機替你抽取一位。`));
- box.append(footer);
- shell.append(box);
- pane.append(shell);
+ const area=el('section','ref-role-library');
+ area.append(el('div','front-eyebrow','YOUR SECRET IDENTITY'));
+ area.append(el('h2','front-section-title','決定你的角色'));
+ area.append(el('p','front-muted','你將成為陳宅故事中的一名角色。每位角色都有自己的祕密與任務。'));
+ const grid=el('div','ref-role-grid');
+ D.roles.forEach(name=>{
+  const b=el('button','ref-role-card'+(!randomRoleMode&&selectedRole===name?' selected':''));b.type='button';
+  const img=el('img','ref-role-image');img.src=V.portraits[name]||'';img.alt=name+' 人物立繪';
+  b.append(img,el('div','ref-role-name',name));
+  b.addEventListener('click',()=>{selectedRole=name;randomRoleMode=false;renderRoleSelect(pane);});
+  grid.append(b);
+ });area.append(grid);
+ const actions=el('div','ref-role-actions');
+ actions.append(frontButton(randomRoleMode?'↔ 正在隨機抽角':'↔ 隨機分配角色',()=>{randomRoleMode=!randomRoleMode;renderRoleSelect(pane);},'ref-role-random'));
+ actions.append(frontButton(randomRoleMode?'抽取我的角色':'確認我的角色',()=>{
+  const role=randomRoleMode?D.roles[Math.floor(Math.random()*D.roles.length)]:selectedRole;
+  if(!confirm('確定開始扮演「'+role+'」嗎？此操作會覆蓋目前的遊戲進度。'))return;
+  state=newState();state.player=role;state.phase='cast';state.castIndex=0;save();frontSection('play');render();
+ },'ref-role-confirm'));
+ area.append(actions);area.append(frontButton('← 返回劇本選擇',()=>frontSection('cases'),'ref-small-back'));
+ pane.append(area);
 }
 function beginPrologue(){
- const narrative=D.intro.replace(/\r/g,'').split(/(?<=[。！？])|\n+/).map(x=>x.trim()).filter(Boolean);
+ const intro=`民國年間，戰火與瘟疫讓江南清河縣逐漸衰敗。鎮西長鹽山腳下，矗立著一座古老的陳宅，終年濃霧不散。\n多年來，姨太太接連離奇失蹤，莫名的大火幾乎燒盡家業；夜深時，宅內還會傳出如同女鬼哭泣的歌聲。\n十一月初七的雨夜，雷鳴電閃。七位各懷心事的人因一場婚禮來到陳宅，卻不知這座古宅藏著多少不能說出口的秘密。\n當大雨停歇、黎明到來之時，究竟有幾個人能平安離開？`;
+ const narrative=intro.split('\n').map(x=>x.trim()).filter(Boolean);
  const merged=[];
  for(const sentence of narrative){
   if(merged.length && merged[merged.length-1].length<48)merged[merged.length-1]+=sentence;
@@ -172,7 +142,12 @@ function showCastSceneInfo(name,info,idx,total){
  const quote=el('div','cast-scene-quote',info.quote||'');
  const count=el('div','cast-scene-count',`${String(idx+1).padStart(2,'0')} / ${String(total).padStart(2,'0')}`);
  box.append(meta,nm,role,desc,quote,count);
-}
+ const action=el('button','cast-scene-next',idx<total-1?'下一位　›':'進入故事　›');
+ action.type='button';action.addEventListener('click',()=>{
+  if(idx<total-1){state.castIndex=idx+1;save();render();}
+  else{state.castIndex=0;save();clearSceneInfo();setPhase('prologue');beginPrologue();}
+ });box.append(action);
+} 
 function option(label,fn,{primary=false,sub=''}={}){const b=el('button','option'+(primary?' primary':''));b.type='button';b.append(document.createTextNode(label));if(sub)b.appendChild(el('small','',sub));b.addEventListener('click',fn);$('options').appendChild(b);return b;}
 function auxButton(label,fn){const b=el('button','',label);b.type='button';b.addEventListener('click',fn);$('aux').appendChild(b);return b;}
 function hideDialogue(){
@@ -209,8 +184,8 @@ function showPortraits(left='',right='',who=''){
   const mapped=(name==='孔神婆附身'||name==='附身孔神婆')?'附身的孔神婆':name;
   const show=!!mapped && !!V.portraits[mapped];
   node.classList.toggle('visible',show);
-  node.classList.toggle('active',!!who&&name===who);
-  node.classList.toggle('dimmed',!!who&&name!==who);
+  node.classList.toggle('active',show && !!who&&name===who);
+  node.classList.toggle('dimmed',show && !!who&&name!==who);
   $(nid).textContent=name;
   const portrait=node.querySelector('img');if(show&&portrait.getAttribute('src')!==V.portraits[mapped])portrait.src=V.portraits[mapped];
  }
@@ -251,15 +226,11 @@ function renderCastIntro(){
  const idx=Math.max(0,Math.min(state.castIndex||0,ordered.length-1));
  const name=ordered[idx];
  const info=CAST_INTROS[name]||{role:V.labels[name]||'',meta:'PUBLIC INTRODUCTION',desc:'',quote:''};
- showPortraits('',name,'');
+ showPortraits(name,'','');
  showCastSceneInfo(name,info,idx,ordered.length);
- setHeader('在場人物','在場人物・自我介紹','在開始調查之前，先認識今晚與死者有關的七名主要人物。讀完所有公開介紹後，再正式進入故事序章。');
- const panel=el('article','cast-panel intro-panel');
- panel.append(renderCastThumbStrip(name));
- $('options').appendChild(panel);
- if(idx<ordered.length-1)option('下一位 →',()=>{state.castIndex=idx+1;save();render();},{primary:true});
- else option('全部讀完，開始案件序章',()=>{state.castIndex=0;save();clearSceneInfo();setPhase('prologue');beginPrologue();},{primary:true});
- auxButton('返回角色選擇',()=>frontSection('roles'));
+ $('castPageHeading').hidden=false;$('castPageCount').hidden=false;
+ $('castPageCount').textContent=`${String(idx+1).padStart(2,'0')} / ${String(ordered.length).padStart(2,'0')}`;
+ setHeader('在場人物','在場人物・自我介紹','在開始調查之前，先認識今晚出現在陳宅的人物。');
 }
 function stageLabel(){const map={start:'準備',cast:'在場人物',prologue:'案件序章',read:'劇本閱讀',ritual:'孔神婆儀式',interview:'人物問答',public:'公開討論',search1:'第一輪搜證',searchSecret:'密室搜證',solveSecret:'密室推理',search2:'第二輪搜證',identity:'身分推理',vote:'最終投票',ending:'真相揭曉'};return map[state.phase]||state.phase;}
 function updateHeader(){
@@ -269,7 +240,15 @@ function updateHeader(){
  $('clueCount').textContent=`${(state.publicClues||[]).length} 張公開`;
  $('readerButton').disabled=!state.player;
 }
-function render(){updateHeader();document.querySelector('.play-area').classList.toggle('choice-mode',state.phase==='interview'&&!!state.interviewTarget);if(state.phase!=='cast')clearSceneInfo();if(queue.length)return;
+function render(){
+ updateHeader();
+ document.body.dataset.phase=state.phase;
+ if(state.phase!=='cast'){$('castPageHeading').hidden=true;$('castPageCount').hidden=true;}
+ const play=document.querySelector('.play-area');
+ play.classList.toggle('choice-mode',state.phase==='interview'&&!!state.interviewTarget);
+ play.classList.toggle('target-mode',state.phase==='interview'&&!state.interviewTarget);
+ if(state.phase!=='cast')clearSceneInfo();
+ if(queue.length)return;
  switch(state.phase){
  case 'start':return renderStart();
  case 'cast':return renderCastIntro();
@@ -522,4 +501,13 @@ for(const [id,kind] of [['tabClue','clues'],['tabTalk','talk'],['tabNote','note'
 $('resetButton').addEventListener('click',()=>{if(!confirm('確定刪除目前遊玩進度並重新開始？'))return;localStorage.removeItem(STORE);state=newState();activeClue=null;hideDialogue();$('readerOverlay').hidden=true;sideTab='clues';renderSidebar();render();frontSection('home');});
 
 $('homeButton').addEventListener('click',()=>frontSection('home'));
+function openRecordPanel(tab){sideTab=tab;renderSidebar();$('app').classList.add('record-open');}
+function closeRecordPanel(){$('app').classList.remove('record-open');}
+for(const [id,tab] of [['recordOpen','clues'],['talkOpen','talk'],['noteOpen','note']]){
+ $(id)?.addEventListener('click',()=>openRecordPanel(tab));
+}
+$('recordClose')?.addEventListener('click',closeRecordPanel);
+$('theaterHome')?.addEventListener('click',()=>frontSection('home'));
+$('recordBackdrop')?.addEventListener('click',closeRecordPanel);
+window.addEventListener('keydown',e=>{if(e.key==='Escape')closeRecordPanel();});
 renderSidebar();render();frontSection('home');
