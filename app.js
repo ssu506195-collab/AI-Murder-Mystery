@@ -1,6 +1,7 @@
 'use strict';
 /* 紙妻 V6.9｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
 const D = window.PAPERWIFE_DATA;
+D.version="6.11";
 const V = window.PAPERWIFE_VISUALS || {portraits:{},labels:{},caseCatalog:[]};
 if (!D) throw new Error('未載入遊戲資料：請確認 data/game-data.js 已上傳。');
 const $ = id => document.getElementById(id);
@@ -424,6 +425,8 @@ const INTERVIEW_DISCLOSURES={
 };
 
 function getPlayerChallenge(act,role){
+ const authored=window.PAPERWIFE_PLAYER_TIMELINE_CHALLENGES?.[String(act)]?.[role];
+ if(authored)return {asker:authored[0],q:authored[1],options:authored[2].map(p=>({text:p[0],react:p[1]}))};
  return (PLAYER_CHALLENGE_OVERRIDES[String(act)]||{})[role] || D.publicChallenges[String(act)][role];
 }
 function getInterviewDisclosure(act,target,layer){
@@ -454,15 +457,18 @@ function hasKnownEvidence(question){
 }
 function renderInterviewTree(){const target=state.interviewTarget;const path=state.questionPath;
  showPortraits(state.player,target,'');
- let items=D.questions[String(state.act)][target];for(const i of path){items=items[i].next||[];}
+ let items=(window.PAPERWIFE_TIMELINE_QUESTIONS?.[String(state.act)]?.[target]||D.questions[String(state.act)][target]);for(const i of path){items=items[i].next||[];}
  const layer=path.length;
  if(layer===3||items.length===0){state.interviewed.push(target);state.interviewTarget=null;state.questionPath=[];save();render();return;}
  const labels=['選擇主要問題','選擇第一次追問','選擇第二次追問'];
  setHeader(`第 ${state.act} 幕 · 詢問 ${target}`,labels[layer],`你正在詢問 ${target}，第 ${layer+1} 層／共 3 層。這輪問答會盡量提供能排除嫌疑、釐清時間線與動機的有效資訊。`);
- items.forEach((item,i)=>{const dialogue=playerAwareQuestion(item);const grounded=layer===0?(window.PAPERWIFE_SAFE_MAIN||{})[String(state.act)]?.[target]?.[i]:null;if(grounded)dialogue.q=grounded;const safe=(window.PAPERWIFE_GROUNDED_GUARDS||{})[String(state.act)]?.[dialogue.q];if(safe&&!hasKnownEvidence(dialogue.q)){dialogue.q=safe[0];dialogue.a=safe[1];}if(state.act===2 && layer===2){const second=(window.PAPERWIFE_SAFE_SECOND||{})[target]?.[path[0]]?.[i];if(second){dialogue.q=second[0];dialogue.a=second[1];}}
+ items.forEach((item,i)=>{const authored=!!window.PAPERWIFE_TIMELINE_QUESTIONS?.[String(state.act)]?.[target];
+ const dialogue=authored?{q:item.q,a:item.a}:playerAwareQuestion(item);
+ if(!authored){const grounded=layer===0?(window.PAPERWIFE_SAFE_MAIN||{})[String(state.act)]?.[target]?.[i]:null;if(grounded)dialogue.q=grounded;const safe=(window.PAPERWIFE_GROUNDED_GUARDS||{})[String(state.act)]?.[dialogue.q];if(safe&&!hasKnownEvidence(dialogue.q)){dialogue.q=safe[0];dialogue.a=safe[1];}}
+
  // 最後才根據當前玩家身分修正稱謂：包含 deep-dialogues、grounded、第二層追問覆寫結果。
  dialogue.q=roleSensitiveQuestion(dialogue.q,state.player,target);
- dialogue.a=characterSafeAnswer(dialogue.a,state.act,target,dialogue.q);
+ if(!authored)dialogue.a=characterSafeAnswer(dialogue.a,state.act,target,dialogue.q);
  option(dialogue.q,()=>{
   const line=[{who:state.player,text:dialogue.q,left:state.player,right:target},{who:target,text:dialogue.a,left:state.player,right:target}];
   // 每一條主問題與第一層追問均有專屬詳述，不再附加重複的制式補充。
@@ -470,27 +476,25 @@ function renderInterviewTree(){const target=state.interviewTarget;const path=sta
  });});
 }
 function buildPublicDebates(){
- const candidates=ordered.filter(name=>name!==state.player);
- const topics=(window.PAPERWIFE_GROUNDED||{})[String(state.act)]||{};
- const used=new Map();const result=[];
- // Every NPC asks exactly two distinct NPCs. Each NPC is questioned exactly twice.
+ const candidates=ordered.filter(name=>name!==state.player), used=new Map(), result=[];
+ const topics=window.PAPERWIFE_TIMELINE_PUBLIC?.[String(state.act)]||{};
+ const clues=(state.publicClues||[]).map(id=>D.clues.find(c=>c.id===id)).filter(Boolean);
+ const clueTalk=window.PAPERWIFE_TIMELINE_CLUES||{};
+ // A clue is used only when a manually-authored, factually relevant response exists.
+ // One clue per target per round; all other discussions use source-grounded witness timelines.
  candidates.forEach((asker,i)=>{
   for(const offset of [1,2]){
    const target=candidates[(i+offset)%candidates.length];
-   const count=used.get(target)||0;used.set(target,count+1);
-   const topic=(topics[target]||[])[Math.min(count,1)];
-   if(!topic)continue;
-   let [q,a,follow,reply]=topic; a=characterSafeAnswer(a,state.act,target,q);reply=characterSafeAnswer(reply,state.act,target,follow);
-   // Publicly drawn evidence may naturally become the subject of conversation.
-   const candidatesClues=(state.publicClues||[]).map(id=>D.clues.find(c=>c.id===id)).filter(Boolean);
-   const matches=candidatesClues.filter(c=>c.area===target && c.round!=='密室');
-   if(count===1 && matches.length){
-    const clue=matches[(i+state.act)%matches.length];
-    const excerpt=clue.text.replace(/\s+/g,' ').slice(0,76);
-    q=`剛剛公開的第 ${clue.id} 號線索提到「${excerpt}${clue.text.length>76?'……':''}」。${target}，你能從自己的經歷說明這件事嗎？`;
-    // The respondent never claims the card proves a motive; draws an inference safely.
-    a=`這張線索是真的值得調查，但不能只靠一件東西就認定是誰動手。我能補充的是：${a}`;
+   const count=used.get(target)||0; used.set(target,count+1);
+   const scene=(topics[target]||[])[Math.min(count,1)]; if(!scene)continue;
+   let [q,a,follow,reply]=scene;
+   const matched=clues.filter(c=>clueTalk[c.id]?.[0]===target);
+   if(count===1&&matched.length){
+    const c=matched[(i+state.act)%matched.length], answer=clueTalk[c.id];
+    [q,a,follow,reply]=answer.slice(1);
+    q=`公開的第 ${c.id} 號提示卡記載「${c.text.replace(/\s+/g,' ').slice(0,120)}${c.text.length>120?'……':''}」。${q}`;
    }
+   // Public discussion is spoken by an NPC, not the user: keep character names as third-person.
    result.push({asker,target,q,a,follow,reply});
   }
  });
