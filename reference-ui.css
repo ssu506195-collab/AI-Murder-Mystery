@@ -246,3 +246,8 @@ body[data-phase="searchSecret"] .control-panel .section-desc{font-size:12px;marg
 .ref-overview-actions .front-button{min-height:48px;padding:12px 22px;border:1px solid #9f7a4a;background:rgba(26,19,18,.96);color:#f2d4a1}
 .ref-overview-actions .gold-button{background:#665035;color:#fff0d8}
 .reader-content{overflow-y:auto;overscroll-behavior:contain;scroll-behavior:auto}
+
+/* V6.10 — source-aware, one-click evidence review */
+.fresh-public-clue{border-color:#d3a96a!important;box-shadow:inset 0 0 0 1px rgba(204,160,96,.26);background:rgba(97,67,38,.27)!important}
+.review-done{width:100%;border:1px solid #d1ad76;background:linear-gradient(95deg,#5d3e27,#3c2b22);color:#fbe4bd;padding:13px 18px;margin:12px 0 20px;font-size:15px;cursor:pointer}
+.ref-scene-toolbar button:disabled{opacity:.4;pointer-events:none}

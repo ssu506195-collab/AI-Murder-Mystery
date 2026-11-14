@@ -132,8 +132,8 @@ function beginPrologue(){
  speak(lines,()=>{setPhase('read');openReader(true);});
 }
 
-function newState(){return {player:null,act:1,phase:'start',castIndex:0,publicDoneActs:[],readActs:[],interviewed:[],interviewTarget:null,questionPath:[],publicLog:[],drawn:[],owned:[],publicClues:[],npcSharedRounds:[],searchStage:null,playerDraws:0,playerAreas:[],aiDrawsDone:false,notes:'',solutions:{},votes:{},result:null,complete:false};}
-function load(){try{const s=JSON.parse(localStorage.getItem(STORE));if(s && typeof s==='object' && (s.phase==='start'||ordered.includes(s.player)) && Number.isInteger(s.act)&&s.act>=1&&s.act<=4)return {...newState(),...s,publicClues:Array.isArray(s.publicClues)?s.publicClues:[],npcSharedRounds:Array.isArray(s.npcSharedRounds)?s.npcSharedRounds:[],publicDoneActs:Array.isArray(s.publicDoneActs)?s.publicDoneActs:[]};}catch{}return newState();}
+function newState(){return {player:null,act:1,phase:'start',castIndex:0,publicDoneActs:[],readActs:[],interviewed:[],interviewTarget:null,questionPath:[],publicLog:[],drawn:[],owned:[],publicClues:[],npcSharedRounds:[],latestNpcPublicIds:[],latestNpcRound:'',searchStage:null,playerDraws:0,playerAreas:[],aiDrawsDone:false,notes:'',solutions:{},votes:{},result:null,complete:false};}
+function load(){try{const s=JSON.parse(localStorage.getItem(STORE));if(s && typeof s==='object' && (s.phase==='start'||ordered.includes(s.player)) && Number.isInteger(s.act)&&s.act>=1&&s.act<=4)return {...newState(),...s,publicClues:Array.isArray(s.publicClues)?s.publicClues:[],npcSharedRounds:Array.isArray(s.npcSharedRounds)?s.npcSharedRounds:[],latestNpcPublicIds:Array.isArray(s.latestNpcPublicIds)?s.latestNpcPublicIds:[],publicDoneActs:Array.isArray(s.publicDoneActs)?s.publicDoneActs:[]};}catch{}return newState();}
 function save(){localStorage.setItem(STORE,JSON.stringify(state));}
 function setPhase(phase){state.phase=phase;save();render();}
 function el(tag,cls,txt){const x=document.createElement(tag);if(cls)x.className=cls;if(txt!==undefined)x.textContent=txt;return x;}
@@ -271,7 +271,9 @@ function updateHeader(){
  $('chapterBadge').textContent=state.phase==='start'?'尚未開始':`第 ${state.act} 幕・${stageLabel()}`;
  if(!queue.length)$('sceneProgress').textContent=stageLabel();
  $('clueCount').textContent=`${(state.publicClues||[]).length} 張公開`;
- $('readerButton').disabled=!state.player;
+ const canReview=!!state.player&&!['cast','prologue','start'].includes(state.phase);
+ $('readerButton').disabled=!canReview;
+ $('theaterReader').disabled=!canReview;
 }
 function render(){
  updateHeader();
@@ -310,25 +312,33 @@ function renderStart(){
  setHeader('民國 · 清河縣','請先從首頁選擇劇本與角色','本版入口已移到首頁。你可以返回劇本選擇，重新決定想扮演的角色。');
  option('返回首頁',()=>frontSection('home'),{primary:true});
 }
-function readerText(){const r=D.roleData[state.player];let t='';if(state.act===1)t=r.prelude+'\n\n────────── 第一幕 ──────────\n\n';
- else t=`第 ${state.act} 幕\n\n`;
- t+=r.acts[state.act-1];return t;
+function readerText(forAdvance=false){
+ const r=D.roleData[state.player];
+ if(forAdvance){
+  const prefix=state.act===1?r.prelude+'\n\n────────── 第一幕 ──────────\n\n':`────────── 第 ${state.act} 幕 ──────────\n\n`;
+  return prefix+r.acts[state.act-1];
+ }
+ // 回顧模式只顯示已到達的幕次；沒有解鎖的後幕永遠不會寫入視窗。
+ const unlocked=Math.max(1,Math.min(4,state.act));
+ const blocks=[r.prelude,'────────── 第一幕 ──────────',r.acts[0]];
+ for(let act=2;act<=unlocked;act++)blocks.push(`────────── 第 ${act} 幕 ──────────`,r.acts[act-1]);
+ return blocks.filter(Boolean).join('\n\n');
 }
 function openReader(forAdvance=false){if(!state.player)return;
- const r=D.roleData[state.player];$('readerTitle').textContent=state.act===1?`${state.player} · 你的故事開始與第一幕`:`${state.player} · 第 ${state.act} 幕`;
- $('readerKicker').textContent='私人劇本｜僅顯示本幕以前內容';
- const lines=readerText();$('readerContent').textContent=lines;
- $('readerContent').scrollTop=0;
- $('readerFooterText').textContent='請讀至本幕結束；之後的劇本不會提前解鎖。';
+ const unlocked=Math.max(1,Math.min(4,state.act));
+ $('readerTitle').textContent=forAdvance?(state.act===1?`${state.player} · 你的故事開始與第一幕`:`${state.player} · 第 ${state.act} 幕`):`${state.player} · 第一幕至第 ${unlocked} 幕`;
+ $('readerKicker').textContent=forAdvance?'本幕角色劇本｜未解鎖內容不顯示':'我的劇本｜已到達幕次完整回顧';
+ $('readerContent').textContent=readerText(forAdvance);
+ $('readerFooterText').textContent=forAdvance?'請讀至本幕結束；之後的劇本不會提前解鎖。':`已到達第 ${unlocked} 幕。以下幕次尚未解鎖。`;
  $('readerDone').hidden=!forAdvance;
  $('readerOverlay').hidden=false;
- // Reset the reader after it becomes visible. This also fixes restored scroll offsets.
  $('readerContent').scrollTop=0;
  $('readerContent').scrollTo?.({top:0,behavior:'instant'});
  requestAnimationFrame(()=>{$('readerContent').scrollTop=0;});
- readerAfter=forAdvance?()=>{if(!state.readActs.includes(state.act))state.readActs.push(state.act);save();$('readerOverlay').hidden=true; if(state.act===1||state.act===3)setPhase('ritual');else if(state.act===2){state.playerDraws=0;state.playerAreas=[];state.aiDrawsDone=false;setPhase('search1');}else setPhase('public');}:null;
+ readerAfter=forAdvance?()=>{if(!state.readActs.includes(state.act))state.readActs.push(state.act);save();$('readerOverlay').hidden=true;if(state.act===1||state.act===3)setPhase('ritual');else if(state.act===2){state.playerDraws=0;state.playerAreas=[];state.aiDrawsDone=false;setPhase('search1');}else setPhase('public');}:null;
 }
 $('readerButton').addEventListener('click',()=>openReader(false));
+$('theaterReader').addEventListener('click',()=>openReader(false));
 $('closeReader').addEventListener('click',()=>{if(readerAfter){message('請先完成本幕劇本閱讀，再進行下一階段。');return;}$('readerOverlay').hidden=true;});
 $('readerDone').addEventListener('click',()=>{const cb=readerAfter;readerAfter=null;if(cb)cb();});
 function renderRead(){setHeader(`第 ${state.act} 幕`,state.act===1?'你的故事開始・第一幕':'閱讀本幕角色劇本',`本幕只會顯示 ${state.player} 的角色劇本，不會開放未解鎖內容。`);option('開啟本幕劇本',()=>openReader(true),{primary:true});}
@@ -449,7 +459,11 @@ function renderInterviewTree(){const target=state.interviewTarget;const path=sta
  if(layer===3||items.length===0){state.interviewed.push(target);state.interviewTarget=null;state.questionPath=[];save();render();return;}
  const labels=['選擇主要問題','選擇第一次追問','選擇第二次追問'];
  setHeader(`第 ${state.act} 幕 · 詢問 ${target}`,labels[layer],`你正在詢問 ${target}，第 ${layer+1} 層／共 3 層。這輪問答會盡量提供能排除嫌疑、釐清時間線與動機的有效資訊。`);
- items.forEach((item,i)=>{const dialogue=playerAwareQuestion(item);const grounded=layer===0?(window.PAPERWIFE_SAFE_MAIN||{})[String(state.act)]?.[target]?.[i]:null;if(grounded)dialogue.q=grounded;const safe=(window.PAPERWIFE_GROUNDED_GUARDS||{})[String(state.act)]?.[dialogue.q];if(safe&&!hasKnownEvidence(dialogue.q)){dialogue.q=safe[0];dialogue.a=safe[1];}if(state.act===2 && layer===2){const second=(window.PAPERWIFE_SAFE_SECOND||{})[target]?.[path[0]]?.[i];if(second){dialogue.q=second[0];dialogue.a=second[1];}}option(dialogue.q,()=>{
+ items.forEach((item,i)=>{const dialogue=playerAwareQuestion(item);const grounded=layer===0?(window.PAPERWIFE_SAFE_MAIN||{})[String(state.act)]?.[target]?.[i]:null;if(grounded)dialogue.q=grounded;const safe=(window.PAPERWIFE_GROUNDED_GUARDS||{})[String(state.act)]?.[dialogue.q];if(safe&&!hasKnownEvidence(dialogue.q)){dialogue.q=safe[0];dialogue.a=safe[1];}if(state.act===2 && layer===2){const second=(window.PAPERWIFE_SAFE_SECOND||{})[target]?.[path[0]]?.[i];if(second){dialogue.q=second[0];dialogue.a=second[1];}}
+ // 最後才根據當前玩家身分修正稱謂：包含 deep-dialogues、grounded、第二層追問覆寫結果。
+ dialogue.q=roleSensitiveQuestion(dialogue.q,state.player,target);
+ dialogue.a=characterSafeAnswer(dialogue.a,state.act,target,dialogue.q);
+ option(dialogue.q,()=>{
   const line=[{who:state.player,text:dialogue.q,left:state.player,right:target},{who:target,text:dialogue.a,left:state.player,right:target}];
   // 每一條主問題與第一層追問均有專屬詳述，不再附加重複的制式補充。
   state.questionPath.push(i);save();speak(line,()=>{logLines(line);render();},{auto:true,untilLast:true});
@@ -466,7 +480,7 @@ function buildPublicDebates(){
    const count=used.get(target)||0;used.set(target,count+1);
    const topic=(topics[target]||[])[Math.min(count,1)];
    if(!topic)continue;
-   let [q,a,follow,reply]=topic;
+   let [q,a,follow,reply]=topic; a=characterSafeAnswer(a,state.act,target,q);reply=characterSafeAnswer(reply,state.act,target,follow);
    // Publicly drawn evidence may naturally become the subject of conversation.
    const candidatesClues=(state.publicClues||[]).map(id=>D.clues.find(c=>c.id===id)).filter(Boolean);
    const matches=candidatesClues.filter(c=>c.area===target && c.round!=='密室');
@@ -582,7 +596,7 @@ function drawOne(round){const index=state.playerDraws;
  if(c.area!=='公共'&&c.area!=='密室')state.playerAreas.push(c.area);
  save();render();}
 function autoDraw(round){const total=round==='密室'?2:round==='第一輪'?3:5;
- let num=0;
+ const beforePublic=new Set(state.publicClues||[]);let num=0;
  for(const actor of ordered.filter(n=>n!==state.player)){
   const areas=[], seen=state.drawn;
   for(let i=0;i<total;i++){
@@ -592,7 +606,10 @@ function autoDraw(round){const total=round==='密室'?2:round==='第一輪'?3:5;
    if(c.area!=='公共'&&c.area!=='密室')areas.push(c.area);
   }
  }
- const shown=shareNpcClues(round)||0;state.aiDrawsDone=true;save();message(`其他角色本輪搜得 ${num} 張提示卡，其中 ${shown} 張私人線索選擇公開；其餘保留在各自手中。`);render();
+ const shown=shareNpcClues(round)||0;state.latestNpcPublicIds=(state.publicClues||[]).filter(id=>!beforePublic.has(id));state.latestNpcRound=round;state.aiDrawsDone=true;save();render();
+ // 第一次收到其他角色的搜證情報，直接開啟公開情報，不要求玩家自己尋找入口。
+ openRecordPanel('clues');$('sideContent').scrollTop=0;
+ message(`其他角色完成搜證：新增公開的私人線索 ${shown} 張，已開啟公開情報供你閱讀。閱讀後按 × 返回搜證。`);
 }
 function renderSearch(round){
  const target=round==='密室'?2:round==='第一輪'?3:5;
@@ -684,9 +701,19 @@ function renderSidebar(){
  const pane=$('sideContent');clear(pane);
  if(sideTab==='clues'){
   const pub=(state.publicClues||[]).map(id=>D.clues.find(c=>c.id===id)).filter(Boolean);
-  pane.appendChild(el('h4','side-subtitle',`已公開的線索（${pub.length}）`));
+  const freshIds=new Set(state.latestNpcPublicIds||[]);
+  const fresh=pub.filter(c=>freshIds.has(c.id));
+  if(fresh.length&&state.aiDrawsDone){
+   pane.appendChild(el('h4','side-subtitle',`${state.latestNpcRound||'最近一輪'}・其他角色新公開（${fresh.length} 張）`));
+   pane.appendChild(el('p','empty','這些是其他角色本輪公開、你現在可以用來盤問的內容。其他人的私人未公開卡不會在這裡顯示。'));
+   for(const c of fresh.slice().reverse()){
+    const box=el('article','clue-box fresh-public-clue');box.appendChild(el('h4','',`新公開・提示卡 ${String(c.id).padStart(2,'0')}｜${c.area}`));box.appendChild(el('p','',c.text));pane.appendChild(box);
+   }
+   const done=el('button','review-done','我已讀完，返回遊戲');done.type='button';done.addEventListener('click',closeRecordPanel);pane.appendChild(done);
+  }
+  pane.appendChild(el('h4','side-subtitle',`全部已公開的線索（${pub.length}）`));
   if(!pub.length)pane.appendChild(el('p','empty','目前還沒有公開線索。第一幕不會發放提示卡。'));
-  for(const c of pub.slice().reverse()){
+  for(const c of pub.filter(c=>!freshIds.has(c.id)||!state.aiDrawsDone).slice().reverse()){
    const box=el('article','clue-box');box.appendChild(el('h4','',`提示卡・${String(c.id).padStart(2,'0')}｜${c.area}`));box.appendChild(el('p','',c.text));pane.appendChild(box);
   }
   const mine=state.owned.filter(x=>x.owner===state.player&&!(state.publicClues||[]).includes(x.id));

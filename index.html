@@ -4,18 +4,19 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="theme-color" content="#161411" />
-<title>紙妻｜免 Token V6.9</title>
-<link rel="stylesheet" href="style.css?v=6.9" />
-<link rel="stylesheet" href="reference-ui.css?v=6.9" />
-<script defer src="data/game-data.js?v=6.9"></script>
-<script defer src="data/visual-data.js?v=6.9"></script>
-<script defer src="data/deep-dialogues.js?v=6.9"></script>
-<script defer src="data/role-aware-dialogues.js?v=6.9"></script>
-<script defer src="data/grounded-talks.js?v=6.9"></script>
-<script defer src="data/grounded-guards.js?v=6.9"></script>
-<script defer src="data/grounded-second.js?v=6.9"></script>
-<script defer src="data/grounded-critical.js?v=6.9"></script>
-<script defer src="app.js?v=6.9"></script>
+<title>紙妻｜免 Token V6.10</title>
+<link rel="stylesheet" href="style.css?v=6.10" />
+<link rel="stylesheet" href="reference-ui.css?v=6.10" />
+<script defer src="data/game-data.js?v=6.10"></script>
+<script defer src="data/visual-data.js?v=6.10"></script>
+<script defer src="data/deep-dialogues.js?v=6.10"></script>
+<script defer src="data/role-aware-dialogues.js?v=6.10"></script>
+<script defer src="data/grounded-talks.js?v=6.10"></script>
+<script defer src="data/grounded-guards.js?v=6.10"></script>
+<script defer src="data/grounded-second.js?v=6.10"></script>
+<script defer src="data/grounded-critical.js?v=6.10"></script>
+<script defer src="data/role-context-and-evidence.js?v=6.10"></script>
+<script defer src="app.js?v=6.10"></script>
 </head>
 <body>
 <div class="front-screen" id="frontScreen" hidden>
@@ -27,13 +28,14 @@
 <div id="app">
 <header class="topbar">
  <div class="brand"><span class="brand-icon">殺</span><div><strong>紙妻</strong><span>陳宅詭夜 · 免 Token 完整遊玩版</span></div></div>
- <div class="topactions"><span id="chapterBadge" class="pill">準備中</span><button id="homeButton" class="quiet" type="button">選擇劇本</button><button id="readerButton" class="quiet" type="button">我的劇本</button><button id="resetButton" class="quiet" type="button">重新開始</button></div>
+ <div class="topactions"><span id="chapterBadge" class="pill">準備中</span><button id="homeButton" class="quiet" type="button">選擇劇本</button><button id="readerButton" class="quiet" type="button">歷史劇本</button><button id="resetButton" class="quiet" type="button">重新開始</button></div>
 </header>
 <div class="layout">
  <main class="play-area">
   <div class="scene" id="scene">
    <div class="scene-vignette"></div>
    <div class="ref-scene-toolbar">
+    <button id="theaterReader" type="button">▥　歷史劇本</button>
     <button id="recordOpen" type="button">▤　公開情報</button>
     <button id="talkOpen" type="button">◎　公開問答</button>
     <button id="noteOpen" type="button">▣　推理筆記</button>
