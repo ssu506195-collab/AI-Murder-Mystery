@@ -1,5 +1,5 @@
 'use strict';
-/* 紙妻 V6.8c｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
+/* 紙妻 V6.9｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
 const D = window.PAPERWIFE_DATA;
 const V = window.PAPERWIFE_VISUALS || {portraits:{},labels:{},caseCatalog:[]};
 if (!D) throw new Error('未載入遊戲資料：請確認 data/game-data.js 已上傳。');
@@ -132,8 +132,8 @@ function beginPrologue(){
  speak(lines,()=>{setPhase('read');openReader(true);});
 }
 
-function newState(){return {player:null,act:1,phase:'start',castIndex:0,readActs:[],interviewed:[],interviewTarget:null,questionPath:[],publicLog:[],drawn:[],owned:[],publicClues:[],npcSharedRounds:[],searchStage:null,playerDraws:0,playerAreas:[],aiDrawsDone:false,notes:'',solutions:{},votes:{},result:null,complete:false};}
-function load(){try{const s=JSON.parse(localStorage.getItem(STORE));if(s && typeof s==='object' && (s.phase==='start'||ordered.includes(s.player)) && Number.isInteger(s.act)&&s.act>=1&&s.act<=4)return {...newState(),...s,publicClues:Array.isArray(s.publicClues)?s.publicClues:[],npcSharedRounds:Array.isArray(s.npcSharedRounds)?s.npcSharedRounds:[]};}catch{}return newState();}
+function newState(){return {player:null,act:1,phase:'start',castIndex:0,publicDoneActs:[],readActs:[],interviewed:[],interviewTarget:null,questionPath:[],publicLog:[],drawn:[],owned:[],publicClues:[],npcSharedRounds:[],searchStage:null,playerDraws:0,playerAreas:[],aiDrawsDone:false,notes:'',solutions:{},votes:{},result:null,complete:false};}
+function load(){try{const s=JSON.parse(localStorage.getItem(STORE));if(s && typeof s==='object' && (s.phase==='start'||ordered.includes(s.player)) && Number.isInteger(s.act)&&s.act>=1&&s.act<=4)return {...newState(),...s,publicClues:Array.isArray(s.publicClues)?s.publicClues:[],npcSharedRounds:Array.isArray(s.npcSharedRounds)?s.npcSharedRounds:[],publicDoneActs:Array.isArray(s.publicDoneActs)?s.publicDoneActs:[]};}catch{}return newState();}
 function save(){localStorage.setItem(STORE,JSON.stringify(state));}
 function setPhase(phase){state.phase=phase;save();render();}
 function el(tag,cls,txt){const x=document.createElement(tag);if(cls)x.className=cls;if(txt!==undefined)x.textContent=txt;return x;}
@@ -265,7 +265,7 @@ function renderCastIntro(){
  $('castPageCount').textContent=`${String(idx+1).padStart(2,'0')} / ${String(ordered.length).padStart(2,'0')}`;
  setHeader('在場人物','在場人物・自我介紹','在開始調查之前，先認識今晚出現在陳宅的人物。');
 }
-function stageLabel(){const map={start:'準備',cast:'在場人物',prologue:'案件序章',read:'劇本閱讀',ritual:'孔神婆儀式',interview:'人物問答',public:'公開討論',search1:'第一輪搜證',searchSecret:'密室搜證',solveSecret:'密室推理',search2:'第二輪搜證',identity:'身分推理',vote:'最終投票',ending:'真相揭曉'};return map[state.phase]||state.phase;}
+function stageLabel(){const map={start:'準備',cast:'在場人物',prologue:'案件序章',read:'劇本閱讀',ritual:'孔神婆儀式',interview:'人物問答',public:'公開盤問・證詞交換',search1:'第一輪搜證',searchSecret:'密室搜證',solveSecret:'密室推理',search2:'第二輪搜證',identity:'身分推理',vote:'最終投票',ending:'真相揭曉'};return map[state.phase]||state.phase;}
 function updateHeader(){
  applySceneVisual();
  $('chapterBadge').textContent=state.phase==='start'?'尚未開始':`第 ${state.act} 幕・${stageLabel()}`;
@@ -326,13 +326,13 @@ function openReader(forAdvance=false){if(!state.player)return;
  $('readerContent').scrollTop=0;
  $('readerContent').scrollTo?.({top:0,behavior:'instant'});
  requestAnimationFrame(()=>{$('readerContent').scrollTop=0;});
- readerAfter=forAdvance?()=>{if(!state.readActs.includes(state.act))state.readActs.push(state.act);save();$('readerOverlay').hidden=true; if(state.act===1||state.act===3)setPhase('ritual');else if(state.act===2){state.playerDraws=0;state.playerAreas=[];state.aiDrawsDone=false;setPhase('search1');}else setPhase('interview');}:null;
+ readerAfter=forAdvance?()=>{if(!state.readActs.includes(state.act))state.readActs.push(state.act);save();$('readerOverlay').hidden=true; if(state.act===1||state.act===3)setPhase('ritual');else if(state.act===2){state.playerDraws=0;state.playerAreas=[];state.aiDrawsDone=false;setPhase('search1');}else setPhase('public');}:null;
 }
 $('readerButton').addEventListener('click',()=>openReader(false));
 $('closeReader').addEventListener('click',()=>{if(readerAfter){message('請先完成本幕劇本閱讀，再進行下一階段。');return;}$('readerOverlay').hidden=true;});
 $('readerDone').addEventListener('click',()=>{const cb=readerAfter;readerAfter=null;if(cb)cb();});
 function renderRead(){setHeader(`第 ${state.act} 幕`,state.act===1?'你的故事開始・第一幕':'閱讀本幕角色劇本',`本幕只會顯示 ${state.player} 的角色劇本，不會開放未解鎖內容。`);option('開啟本幕劇本',()=>openReader(true),{primary:true});}
-function renderRitual(){showPortraits();if(state.act===1){setHeader('第一幕 · 小劇場','孔神婆主持婚禮沖喜儀式','此段會切換到婚房儀式場景。神婆附身、眾人的反應，以及惠雯突然現身，都是後續推理的重要資訊。每按一次只播放一句。');option('開始孔神婆儀式',()=>speak(D.ritual.map((line,i)=>line.who==='孔神婆'?{...line,left:'孔神婆',right:'',portrait:(i>=3?'附身的孔神婆':'孔神婆')}: {...line,left:'',right:''}),()=>setPhase('interview')),{primary:true});}
+function renderRitual(){showPortraits();if(state.act===1){setHeader('第一幕 · 小劇場','孔神婆主持婚禮沖喜儀式','此段會切換到婚房儀式場景。神婆附身、眾人的反應，以及惠雯突然現身，都是後續推理的重要資訊。每按一次只播放一句。');option('開始孔神婆儀式',()=>speak(D.ritual.map((line,i)=>line.who==='孔神婆'?{...line,left:'孔神婆',right:'',portrait:(i>=3?'附身的孔神婆':'孔神婆')}: {...line,left:'',right:''}),()=>{state.act=2;state.interviewed=[];state.interviewTarget=null;state.questionPath=[];setPhase('read');openReader(true);}),{primary:true});}
  else {setHeader('第三幕 · 小劇場','黑暗中的密室','昏暗的密室深處，古老機關與離奇屍塊正等待你們調查。之後將進入密室搜證與推理。');option('進入密室劇場',()=>speak(D.haunt,()=>{state.playerDraws=0;state.playerAreas=[];state.aiDrawsDone=false;setPhase('searchSecret');}),{primary:true});}}
 
 const PLAYER_CHALLENGE_OVERRIDES={
@@ -424,13 +424,23 @@ function getInterviewDisclosure(act,target,layer){
 function renderInterview(){showPortraits(state.player,'','');const remaining=ordered.filter(n=>n!==state.player&&!state.interviewed.includes(n));
  if(state.interviewTarget)return renderInterviewTree();
  setHeader(`第 ${state.act} 幕 · 公開詢問`,`詢問角色（${state.interviewed.length}/2）`,'本幕選擇兩名不同角色各完成一組三層問答。每名角色有三個量身編寫的主問題，之後可再追問兩次，每層三個選項。所有對話公開記錄。');
- if(state.interviewed.length>=2){option('兩名角色詢問完成，開始其他角色公開討論',()=>setPhase('public'),{primary:true});return;}
+ if(state.interviewed.length>=2){option('兩名角色詢問完成，進入其他角色對你的質問',()=>renderChallenge(),{primary:true});return;}
  for(const n of remaining)option(`詢問 ${n}`,()=>{state.interviewTarget=n;state.questionPath=[];save();render();},{sub:'本幕 3 個角色專屬問題'});
 }
 function playerAwareQuestion(item){
  const role=state.player;
  const override=(window.PAPERWIFE_ROLE_AWARE||{})[role]?.[item.q];
  return {q:override?.q||item.q,a:override?.a||item.a};
+}
+function hasKnownEvidence(question){
+ const publicText=(state.publicClues||[]).map(id=>D.clues.find(c=>c.id===id)?.text||'').join(' ');
+ const talks=(state.publicLog||[]).map(x=>x.text).join(' ');
+ const corpus=publicText+' '+talks;
+ const markers=['娃娃眼','麻繩','繩子','針孔','針筒','藥粉','巧克力','錄音機','玉佩','蘭花香','夜梟','血','勒痕','鳥','紋身','電台','照片','枕頭','工具間'];
+ const found=markers.filter(word=>question.includes(word));
+ // The first act's shared scene (ritual) is an independent public source.
+ const shared='惠雯 童謠 娃娃眼 東青 阿忠 繩子 婚紗 孔神婆 閣樓';
+ return !found.length || found.every(word=>corpus.includes(word)||(state.act>=2&&shared.includes(word)));
 }
 function renderInterviewTree(){const target=state.interviewTarget;const path=state.questionPath;
  showPortraits(state.player,target,'');
@@ -439,21 +449,62 @@ function renderInterviewTree(){const target=state.interviewTarget;const path=sta
  if(layer===3||items.length===0){state.interviewed.push(target);state.interviewTarget=null;state.questionPath=[];save();render();return;}
  const labels=['選擇主要問題','選擇第一次追問','選擇第二次追問'];
  setHeader(`第 ${state.act} 幕 · 詢問 ${target}`,labels[layer],`你正在詢問 ${target}，第 ${layer+1} 層／共 3 層。這輪問答會盡量提供能排除嫌疑、釐清時間線與動機的有效資訊。`);
- items.forEach((item,i)=>{const dialogue=playerAwareQuestion(item);option(dialogue.q,()=>{
+ items.forEach((item,i)=>{const dialogue=playerAwareQuestion(item);const grounded=layer===0?(window.PAPERWIFE_SAFE_MAIN||{})[String(state.act)]?.[target]?.[i]:null;if(grounded)dialogue.q=grounded;const safe=(window.PAPERWIFE_GROUNDED_GUARDS||{})[String(state.act)]?.[dialogue.q];if(safe&&!hasKnownEvidence(dialogue.q)){dialogue.q=safe[0];dialogue.a=safe[1];}if(state.act===2 && layer===2){const second=(window.PAPERWIFE_SAFE_SECOND||{})[target]?.[path[0]]?.[i];if(second){dialogue.q=second[0];dialogue.a=second[1];}}option(dialogue.q,()=>{
   const line=[{who:state.player,text:dialogue.q,left:state.player,right:target},{who:target,text:dialogue.a,left:state.player,right:target}];
   // 每一條主問題與第一層追問均有專屬詳述，不再附加重複的制式補充。
   state.questionPath.push(i);save();speak(line,()=>{logLines(line);render();},{auto:true,untilLast:true});
  });});
 }
-function renderPublic(){
- setHeader(`第 ${state.act} 幕 · 公開對話`,'其他人的質疑，也會影響你的判斷','先觀看其他角色之間的公開問答，再由其他角色反過來詢問你。每段對話都必須點擊繼續才會展示下一句。');
- option('觀看其他角色的公開討論',()=>runPublicPairs(),{primary:true});
+function buildPublicDebates(){
+ const candidates=ordered.filter(name=>name!==state.player);
+ const topics=(window.PAPERWIFE_GROUNDED||{})[String(state.act)]||{};
+ const used=new Map();const result=[];
+ // Every NPC asks exactly two distinct NPCs. Each NPC is questioned exactly twice.
+ candidates.forEach((asker,i)=>{
+  for(const offset of [1,2]){
+   const target=candidates[(i+offset)%candidates.length];
+   const count=used.get(target)||0;used.set(target,count+1);
+   const topic=(topics[target]||[])[Math.min(count,1)];
+   if(!topic)continue;
+   let [q,a,follow,reply]=topic;
+   // Publicly drawn evidence may naturally become the subject of conversation.
+   const candidatesClues=(state.publicClues||[]).map(id=>D.clues.find(c=>c.id===id)).filter(Boolean);
+   const matches=candidatesClues.filter(c=>c.area===target && c.round!=='密室');
+   if(count===1 && matches.length){
+    const clue=matches[(i+state.act)%matches.length];
+    const excerpt=clue.text.replace(/\s+/g,' ').slice(0,76);
+    q=`剛剛公開的第 ${clue.id} 號線索提到「${excerpt}${clue.text.length>76?'……':''}」。${target}，你能從自己的經歷說明這件事嗎？`;
+    // The respondent never claims the card proves a motive; draws an inference safely.
+    a=`這張線索是真的值得調查，但不能只靠一件東西就認定是誰動手。我能補充的是：${a}`;
+   }
+   result.push({asker,target,q,a,follow,reply});
+  }
+ });
+ return result;
 }
-function runPublicPairs(){
- const pairs=D.publicPairs[state.act].filter(x=>x[0]!==state.player&&x[1]!==state.player).slice(0,2);
- const items=[];for(const p of pairs){items.push({who:'旁白',text:`${p[0]} 對 ${p[1]} 提出了疑問。`});items.push({who:p[0],text:p[2],left:p[0],right:p[1]},{who:p[1],text:p[3],left:p[0],right:p[1]},{who:p[0],text:p[4],left:p[0],right:p[1]},{who:p[1],text:p[5],left:p[0],right:p[1]});}
- if(!pairs.length)items.push({who:'旁白',text:'眾人各懷心事，暫時沒人願意再多說。'});
- speak(items,()=>{logLines(items);renderChallenge();});
+function renderPublic(){
+ showPortraits();
+ if(state.act===1){state.act=2;setPhase('read');openReader(true);return;}
+ if((state.publicDoneActs||[]).includes(state.act)){setPhase('interview');return;}
+ const debates=buildPublicDebates();
+ setHeader(`第 ${state.act} 幕 · 公開證詞交換`,'先聽其他人的詢問，再決定自己要問什麼',`本輪共有 ${debates.length} 組公開詢問。六位電腦角色各向兩個不同對象提問，每人也會被詢問兩次。每段證詞都會進入公開問答紀錄，之後才輪到你選兩名角色追問。`);
+ option(`開始公開詢問（${debates.length} 組）`,()=>runPublicPairs(debates),{primary:true});
+}
+function runPublicPairs(debates=buildPublicDebates()){
+ const items=[];
+ debates.forEach((d,i)=>{
+  items.push({who:'旁白',text:`公開詢問 ${i+1}／${debates.length}：${d.asker} 決定向 ${d.target} 追問。`});
+  items.push({who:d.asker,text:d.q,left:d.asker,right:d.target});
+  items.push({who:d.target,text:d.a,left:d.asker,right:d.target});
+  items.push({who:d.asker,text:d.follow,left:d.asker,right:d.target});
+  items.push({who:d.target,text:d.reply,left:d.asker,right:d.target});
+ });
+ speak(items,()=>{
+  logLines(items);
+  if(!state.publicDoneActs)state.publicDoneActs=[];
+  if(!state.publicDoneActs.includes(state.act))state.publicDoneActs.push(state.act);
+  save();setPhase('interview');
+ });
 }
 function renderChallenge(){const x=getPlayerChallenge(state.act,state.player);
  showPortraits(x.asker,state.player,'');
@@ -570,7 +621,7 @@ function renderSearch(round){
  }else if(round==='密室'){
   button=el('button','search-draw-button','開始密室推理');button.addEventListener('click',()=>{activeClue=null;setPhase('solveSecret');});
  }else if(round==='第一輪'){
-  button=el('button','search-draw-button','進入人物問答');button.addEventListener('click',()=>{activeClue=null;setPhase('interview');});
+  button=el('button','search-draw-button','進入人物問答');button.addEventListener('click',()=>{activeClue=null;setPhase('public');});
  }else{
   button=el('button','search-draw-button','進入身分推理');button.addEventListener('click',()=>{activeClue=null;setPhase('identity');});
  }
@@ -592,7 +643,7 @@ function renderSolveSecret(){setHeader('第三幕 · 密室推理','四具屍體
  });
 }
 function renderIdentity(){setHeader('第三幕 · 身分推理','誰頂替了陳宅主人？','第三幕的證據已逐漸指向陳宅主人的祕密。請比對人物證詞與照片，找出他的真實身分。');
- for(const x of ['現任陳聿明其實是駱午陽','東青其實是陳聿明','戴思齊其實是陳聿明','阿忠其實是孔神婆'])option(x,()=>{if(x.startsWith('現任陳聿明')){state.solutions.identity=true;setPhase('interview');}else message('請再比對黃埔軍校照片、手腕特徵和舊火災。');});
+ for(const x of ['現任陳聿明其實是駱午陽','東青其實是陳聿明','戴思齊其實是陳聿明','阿忠其實是孔神婆'])option(x,()=>{if(x.startsWith('現任陳聿明')){state.solutions.identity=true;setPhase('public');}else message('請再比對黃埔軍校照片、手腕特徵和舊火災。');});
 }
 function renderVote(){setHeader('第四幕 · 最終抉擇','投出你認為的兇手','請按順序作出選擇：殺害惠雯的兇手、是否認為自己感染、是否服用娃娃眼，以及保留或銷毀《陳氏古法》。');
  const questions=[
