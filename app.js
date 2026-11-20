@@ -22,6 +22,7 @@ let currentLine = '';
 let frontView = 'home';
 let selectedRole = D.roles[0];
 let randomRoleMode = false;
+const PW_V612_LEADS = window.PAPERWIFE_LEADS_V612 || [];
 let openingIndex = 0;
 function frontButton(label, fn, cls=''){
  const b=el('button','front-button '+cls,label);b.type='button';b.addEventListener('click',fn);return b;
@@ -434,11 +435,47 @@ function getInterviewDisclosure(act,target,layer){
  return ((INTERVIEW_DISCLOSURES[String(act)]||{})[target]) || '';
 }
 
+
+function addCrosscheckLeads(source,question,answer){
+ if(!state.player || state.act<2)return;
+ const available=(window.PAPERWIFE_LEADS_V612||[]);
+ state.crosscheckLeads=state.crosscheckLeads||[];
+ for(const lead of available){
+  if(lead.source!==source || state.act<lead.act || state.player===lead.witness)continue;
+  if(state.crosscheckLeads.some(x=>x.id===lead.id))continue;
+  if(lead.marks.every(m=>!String(question+' '+answer).includes(m)))continue;
+  state.crosscheckLeads.push({id:lead.id,act:state.act,source,done:false});
+ }
+ save();
+}
+function visibleCrosscheckLeads(sourceFilter=null){
+ const data=window.PAPERWIFE_LEADS_V612||[];
+ const historical=state.crosscheckLeads||[];
+ return historical.filter(x=>!x.done&&x.act<=state.act).map(x=>data.find(d=>d.id===x.id)).filter(x=>x&&x.witness!==state.player&&(!sourceFilter||sourceFilter===x.source));
+}
+function investigateLead(lead){
+ const q=lead.question, a=lead.answer;
+ const lines=[{who:'旁白',text:`剛才的證詞提到${lead.witness}，你決定向本人核對。`},
+ {who:state.player,text:q,left:state.player,right:lead.witness},
+ {who:lead.witness,text:a,left:state.player,right:lead.witness}];
+ speak(lines,()=>{
+  logLines(lines);
+  const record=(state.crosscheckLeads||[]).find(x=>x.id===lead.id);
+  if(record)record.done=true;
+  save();render();
+ },{auto:true,untilLast:true});
+}
+function showCrosscheckOptions(source=null){
+ const available=visibleCrosscheckLeads(source);
+ // Extra one-click cross-checks do not replace one of the three authored options.
+ available.slice(0,4).forEach(lead=>auxButton(`交叉查證：向${lead.witness}確認「${lead.title}」`,()=>investigateLead(lead)));
+}
 function renderInterview(){showPortraits(state.player,'','');const remaining=ordered.filter(n=>n!==state.player&&!state.interviewed.includes(n));
  if(state.interviewTarget)return renderInterviewTree();
  setHeader(`第 ${state.act} 幕 · 公開詢問`,`詢問角色（${state.interviewed.length}/2）`,'本幕選擇兩名不同角色各完成一組三層問答。每名角色有三個量身編寫的主問題，之後可再追問兩次，每層三個選項。所有對話公開記錄。');
- if(state.interviewed.length>=2){option('兩名角色詢問完成，進入其他角色對你的質問',()=>renderChallenge(),{primary:true});return;}
+ if(state.interviewed.length>=2){option('兩名角色詢問完成，進入其他角色對你的質問',()=>renderChallenge(),{primary:true});showCrosscheckOptions();return;}
  for(const n of remaining)option(`詢問 ${n}`,()=>{state.interviewTarget=n;state.questionPath=[];save();render();},{sub:'本幕 3 個角色專屬問題'});
+ showCrosscheckOptions();
 }
 function playerAwareQuestion(item){
  const role=state.player;
@@ -455,6 +492,20 @@ function hasKnownEvidence(question){
  const shared='惠雯 童謠 娃娃眼 東青 阿忠 繩子 婚紗 孔神婆 閣樓';
  return !found.length || found.every(word=>corpus.includes(word)||(state.act>=2&&shared.includes(word)));
 }
+function guardSecretReply(target,act,question,answer){
+ // Only public facts may be acknowledged. Characters must not volunteer private crimes or identities.
+ if(target==='東青'&&act===3&&/以老爺的口氣應付|老爺房裡處理事情/.test(answer))
+  return '我那晚在二樓巡查過，江小姐說隔門聽見有人回答，但她並未親眼看見房裡的人。若有人冒充老爺，還得查清誰能進出那間房，不能憑聲音就認定是我。';
+ if(target==='東青'&&act===4&&/我裝成老爺回答過/.test(answer))
+  return '隔門的回話確實可能讓人誤以為老爺就在房內，但江小姐沒有親眼看見誰開口。我承認自己熟悉房間與鑰匙，也願意交代巡查時間；至於冒答的指控，不能只靠猜測。';
+ if(target==='紅豆'&&act===3&&/我當晚見到惠雯穿著婚紗，後來確實失去/.test(answer))
+  return '我夜裡曾在婚房附近走動，因為早先的怪事心神不寧。後來有一段時間我神志不清，醒來也無法確定在我失去意識時發生了什麼；但請別把這當成我承認下了致命手。';
+ if(target==='戴思齊'&&act===4&&question.includes('01:37')){
+  const known=(state.publicClues||[]).includes(24)||(state.publicLog||[]).some(x=>/01:37|採血|抽血/.test(x.text||''));
+  if(!known)return '我確實一直觀察惠雯的異常症狀，也有研究血液的背景，但我不會把未經核實的深夜採樣指控當成既定事實。能否查明死因，還是得看勒痕形成的時間與其他人的出入紀錄。';
+ }
+ return answer;
+}
 function renderInterviewTree(){const target=state.interviewTarget;const path=state.questionPath;
  showPortraits(state.player,target,'');
  let items=(window.PAPERWIFE_TIMELINE_QUESTIONS?.[String(state.act)]?.[target]||D.questions[String(state.act)][target]);for(const i of path){items=items[i].next||[];}
@@ -464,16 +515,30 @@ function renderInterviewTree(){const target=state.interviewTarget;const path=sta
  setHeader(`第 ${state.act} 幕 · 詢問 ${target}`,labels[layer],`你正在詢問 ${target}，第 ${layer+1} 層／共 3 層。這輪問答會盡量提供能排除嫌疑、釐清時間線與動機的有效資訊。`);
  items.forEach((item,i)=>{const authored=!!window.PAPERWIFE_TIMELINE_QUESTIONS?.[String(state.act)]?.[target];
  const dialogue=authored?{q:item.q,a:item.a}:playerAwareQuestion(item);
+ // New V6.12 player-aware rewrite happens after all static data layers are loaded.
+ const v612=(window.PAPERWIFE_PERSPECTIVE_V612||{})[state.player]?.[String(state.act)]?.[target]?.[item.q];
+ if(v612){dialogue.q=v612.q;dialogue.a=v612.a;}
  if(!authored){const grounded=layer===0?(window.PAPERWIFE_SAFE_MAIN||{})[String(state.act)]?.[target]?.[i]:null;if(grounded)dialogue.q=grounded;const safe=(window.PAPERWIFE_GROUNDED_GUARDS||{})[String(state.act)]?.[dialogue.q];if(safe&&!hasKnownEvidence(dialogue.q)){dialogue.q=safe[0];dialogue.a=safe[1];}}
 
  // 最後才根據當前玩家身分修正稱謂：包含 deep-dialogues、grounded、第二層追問覆寫結果。
  dialogue.q=roleSensitiveQuestion(dialogue.q,state.player,target);
  if(!authored)dialogue.a=characterSafeAnswer(dialogue.a,state.act,target,dialogue.q);
+ // Do not treat private knowledge of a precise death time as an established public fact.
+ if(target==='戴思齊'&&state.act===4&&dialogue.q.includes('23:20已死')){
+  dialogue.q='目前只知道惠雯在22:30還能反抗，00:40已被發現死亡。這段期間誰的行蹤最值得查？';
+  dialogue.a='應核對22:30到00:40之間誰進過婚房、誰最後見過她能說話，並分清勒痕與針孔各自何時形成。沒有可靠目擊，不能直接宣稱確切死亡分鐘。';
+ }
+ if(target==='戴思齊'&&state.act===4&&dialogue.q.includes('01:37')){
+  const publicBlood=(state.publicClues||[]).includes(24)||(state.publicLog||[]).some(x=>/01:37|採血|抽血/.test(x.text||''));
+  if(!publicBlood)dialogue.q='有人懷疑你深夜單獨接觸惠雯。除了觀察病情，你當時到底去了哪裡？';
+ }
+ dialogue.a=guardSecretReply(target,state.act,dialogue.q,dialogue.a);
  option(dialogue.q,()=>{
   const line=[{who:state.player,text:dialogue.q,left:state.player,right:target},{who:target,text:dialogue.a,left:state.player,right:target}];
   // 每一條主問題與第一層追問均有專屬詳述，不再附加重複的制式補充。
-  state.questionPath.push(i);save();speak(line,()=>{logLines(line);render();},{auto:true,untilLast:true});
+  state.questionPath.push(i);save();speak(line,()=>{logLines(line);addCrosscheckLeads(target,dialogue.q,dialogue.a);render();},{auto:true,untilLast:true});
  });});
+ showCrosscheckOptions(target);
 }
 function buildPublicDebates(){
  const candidates=ordered.filter(name=>name!==state.player), used=new Map(), result=[];
@@ -519,6 +584,7 @@ function runPublicPairs(debates=buildPublicDebates()){
  });
  speak(items,()=>{
   logLines(items);
+  debates.forEach(d=>{addCrosscheckLeads(d.target,d.q,d.a);addCrosscheckLeads(d.target,d.follow,d.reply);});
   if(!state.publicDoneActs)state.publicDoneActs=[];
   if(!state.publicDoneActs.includes(state.act))state.publicDoneActs.push(state.act);
   save();setPhase('interview');
