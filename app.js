@@ -1,11 +1,11 @@
 'use strict';
 /* 紙妻 V6.9｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
 const D = window.PAPERWIFE_DATA;
-D.version="6.11";
+D.version="6.13";
 const V = window.PAPERWIFE_VISUALS || {portraits:{},labels:{},caseCatalog:[]};
 if (!D) throw new Error('未載入遊戲資料：請確認 data/game-data.js 已上傳。');
 const $ = id => document.getElementById(id);
-const STORE = 'paperwife_v6_notoken_save'; // 延用既有存檔；V6.2 增加公開與持有線索分離。
+const STORE = 'paperwife_v613_fixed_save'; // 延用既有存檔；V6.2 增加公開與持有線索分離。
 const ordered = D.roles;
 let state = load();
 let queue = [];
@@ -134,7 +134,7 @@ function beginPrologue(){
  speak(lines,()=>{setPhase('read');openReader(true);});
 }
 
-function newState(){return {player:null,act:1,phase:'start',castIndex:0,publicDoneActs:[],readActs:[],interviewed:[],interviewTarget:null,questionPath:[],publicLog:[],drawn:[],owned:[],publicClues:[],npcSharedRounds:[],latestNpcPublicIds:[],latestNpcRound:'',searchStage:null,playerDraws:0,playerAreas:[],aiDrawsDone:false,notes:'',solutions:{},votes:{},result:null,complete:false};}
+function newState(){return {player:null,act:1,phase:'start',castIndex:0,publicDoneActs:[],readActs:[],interviewed:[],interviewTarget:null,questionPath:[],publicLog:[],drawn:[],owned:[],publicClues:[],npcSharedRounds:[],latestNpcPublicIds:[],latestNpcRound:'',searchStage:null,playerDraws:0,playerAreas:[],aiDrawsDone:false,notes:'',usedEvidence:[],evidenceCount:{},investigationNotes:[],solutions:{},votes:{},result:null,complete:false};}
 function load(){try{const s=JSON.parse(localStorage.getItem(STORE));if(s && typeof s==='object' && (s.phase==='start'||ordered.includes(s.player)) && Number.isInteger(s.act)&&s.act>=1&&s.act<=4)return {...newState(),...s,publicClues:Array.isArray(s.publicClues)?s.publicClues:[],npcSharedRounds:Array.isArray(s.npcSharedRounds)?s.npcSharedRounds:[],latestNpcPublicIds:Array.isArray(s.latestNpcPublicIds)?s.latestNpcPublicIds:[],publicDoneActs:Array.isArray(s.publicDoneActs)?s.publicDoneActs:[]};}catch{}return newState();}
 function save(){localStorage.setItem(STORE,JSON.stringify(state));}
 function setPhase(phase){state.phase=phase;save();render();}
@@ -465,6 +465,35 @@ function investigateLead(lead){
   save();render();
  },{auto:true,untilLast:true});
 }
+/* 自己持有或真正在公開區的提示卡，才可用於向證人對質。選錯方向會耗用本幕對質配額。 */
+function availableEvidenceConfrontations(targetFilter=null){
+ const all=window.PAPERWIFE_EVIDENCE_CONFRONTATIONS_V613||[];
+ const known=new Set([...(state.publicClues||[]),...(state.owned||[]).filter(x=>x.owner===state.player).map(x=>x.id)]);
+ const used=new Set(state.usedEvidence||[]);
+ return all.filter(x=>state.act>=x.act&&!used.has(x.id)&&x.witness!==state.player&&
+  (!targetFilter||x.witness===targetFilter)&&(x.requiresAll?x.clues.every(id=>known.has(id)):x.clues.some(id=>known.has(id))) && !(x.hideIf||[]).some(id=>known.has(id)));
+}
+function investigateEvidence(x){
+ if((state.evidenceCount||{})[String(state.act)]>=4){message('這一幕的物證對質次數已用完，請繼續整理已有證詞。');return;}
+ const lines=[
+ {who:'旁白',text:`你拿出目前已取得的線索，請${x.witness}對質。`},
+ {who:state.player,text:x.q,left:state.player,right:x.witness},
+ {who:x.witness,text:x.a,left:state.player,right:x.witness}
+ ];
+ speak(lines,()=>{
+  logLines(lines);
+  (state.usedEvidence||(state.usedEvidence=[])).push(x.id);
+  (state.evidenceCount||(state.evidenceCount={}))[String(state.act)]=((state.evidenceCount||{})[String(state.act)]||0)+1;
+  (state.investigationNotes||(state.investigationNotes=[])).push({act:state.act,title:x.title,detail:x.check});
+  addCrosscheckLeads(x.witness,x.q,x.a);save();render();
+ },{auto:true,untilLast:true});
+}
+function showEvidenceOptions(targetFilter=null){
+ const count=(state.evidenceCount||{})[String(state.act)]||0;
+ if(count>=4)return;
+ const visible=availableEvidenceConfrontations(targetFilter);
+ visible.slice(0,16).forEach(x=>auxButton(`依物證對質：${x.witness}・${x.title}（${count}/4）`,()=>investigateEvidence(x)));
+}
 function showCrosscheckOptions(source=null){
  const available=visibleCrosscheckLeads(source);
  // Extra one-click cross-checks do not replace one of the three authored options.
@@ -472,14 +501,14 @@ function showCrosscheckOptions(source=null){
 }
 function renderInterview(){showPortraits(state.player,'','');const remaining=ordered.filter(n=>n!==state.player&&!state.interviewed.includes(n));
  if(state.interviewTarget)return renderInterviewTree();
- setHeader(`第 ${state.act} 幕 · 公開詢問`,`詢問角色（${state.interviewed.length}/2）`,'本幕選擇兩名不同角色各完成一組三層問答。每名角色有三個量身編寫的主問題，之後可再追問兩次，每層三個選項。所有對話公開記錄。');
- if(state.interviewed.length>=2){option('兩名角色詢問完成，進入其他角色對你的質問',()=>renderChallenge(),{primary:true});showCrosscheckOptions();return;}
+ setHeader(`第 ${state.act} 幕 · 公開詢問`,`詢問角色（${state.interviewed.length}/2）`,'從公開證詞和自己已取得的線索中選擇要追查的人。問錯方向可能被帶偏；回答未必全是真的，請用其他人的目擊和物證核對。');
+ if(state.interviewed.length>=2){option('兩名角色詢問完成，進入其他角色對你的質問',()=>renderChallenge(),{primary:true});showCrosscheckOptions();showEvidenceOptions();return;}
  for(const n of remaining)option(`詢問 ${n}`,()=>{state.interviewTarget=n;state.questionPath=[];save();render();},{sub:'本幕 3 個角色專屬問題'});
- showCrosscheckOptions();
+ showCrosscheckOptions();showEvidenceOptions();
 }
 function playerAwareQuestion(item){
  const role=state.player;
- const override=(window.PAPERWIFE_ROLE_AWARE||{})[role]?.[item.q];
+ const override=(window.PAPERWIFE_ROLE_AWARE||{})[role]?.[item.originQ||item.q];
  return {q:override?.q||item.q,a:override?.a||item.a};
 }
 function hasKnownEvidence(question){
@@ -516,11 +545,13 @@ function renderInterviewTree(){const target=state.interviewTarget;const path=sta
  items.forEach((item,i)=>{const authored=!!window.PAPERWIFE_TIMELINE_QUESTIONS?.[String(state.act)]?.[target];
  const dialogue=authored?{q:item.q,a:item.a}:playerAwareQuestion(item);
  // New V6.12 player-aware rewrite happens after all static data layers are loaded.
- const v612=(window.PAPERWIFE_PERSPECTIVE_V612||{})[state.player]?.[String(state.act)]?.[target]?.[item.q];
+ const v612=(window.PAPERWIFE_PERSPECTIVE_V612||{})[state.player]?.[String(state.act)]?.[target]?.[item.originQ||item.q];
  if(v612){dialogue.q=v612.q;dialogue.a=v612.a;}
  if(!authored){const grounded=layer===0?(window.PAPERWIFE_SAFE_MAIN||{})[String(state.act)]?.[target]?.[i]:null;if(grounded)dialogue.q=grounded;const safe=(window.PAPERWIFE_GROUNDED_GUARDS||{})[String(state.act)]?.[dialogue.q];if(safe&&!hasKnownEvidence(dialogue.q)){dialogue.q=safe[0];dialogue.a=safe[1];}}
 
  // 最後才根據當前玩家身分修正稱謂：包含 deep-dialogues、grounded、第二層追問覆寫結果。
+ // 未曾公開的精確時間，不應被提問者當成已知事實；改為讓當事人交代。
+ dialogue.q=sourceAwareQuestion(dialogue.q,state.player,target,state.act,layer);
  dialogue.q=roleSensitiveQuestion(dialogue.q,state.player,target);
  if(!authored)dialogue.a=characterSafeAnswer(dialogue.a,state.act,target,dialogue.q);
  // Do not treat private knowledge of a precise death time as an established public fact.
@@ -538,7 +569,7 @@ function renderInterviewTree(){const target=state.interviewTarget;const path=sta
   // 每一條主問題與第一層追問均有專屬詳述，不再附加重複的制式補充。
   state.questionPath.push(i);save();speak(line,()=>{logLines(line);addCrosscheckLeads(target,dialogue.q,dialogue.a);render();},{auto:true,untilLast:true});
  });});
- showCrosscheckOptions(target);
+ showCrosscheckOptions(target);showEvidenceOptions(target);
 }
 function buildPublicDebates(){
  const candidates=ordered.filter(name=>name!==state.player), used=new Map(), result=[];
@@ -554,12 +585,19 @@ function buildPublicDebates(){
    const scene=(topics[target]||[])[Math.min(count,1)]; if(!scene)continue;
    let [q,a,follow,reply]=scene;
    const matched=clues.filter(c=>clueTalk[c.id]?.[0]===target);
-   if(count===1&&matched.length){
+   if(count===1&&matched.length && state.act>=3){
     const c=matched[(i+state.act)%matched.length], answer=clueTalk[c.id];
     [q,a,follow,reply]=answer.slice(1);
     q=`公開的第 ${c.id} 號提示卡記載「${c.text.replace(/\s+/g,' ').slice(0,120)}${c.text.length>120?'……':''}」。${q}`;
    }
    // Public discussion is spoken by an NPC, not the user: keep character names as third-person.
+   // 發問者若恰好就是證詞裡提到的人，應改用自己的視角。
+   q=sourceAwareQuestion(q,asker,target,state.act,0);
+   follow=sourceAwareQuestion(follow,asker,target,state.act,1,a);
+   q=roleSensitiveQuestion(q,asker,target);
+   follow=roleSensitiveQuestion(follow,asker,target);
+   a=guardSecretReply(target,state.act,q,a);
+   reply=guardSecretReply(target,state.act,follow,reply);
    result.push({asker,target,q,a,follow,reply});
   }
  });
@@ -610,24 +648,11 @@ function afterPublic(){state.interviewed=[];state.interviewTarget=null;state.que
  if(state.act<4){state.act+=1;setPhase('read');openReader(true);}
  else setPhase('vote');
 }
-function rngPick(items){if(!items.length)return null;return items[Math.floor(Math.random()*items.length)];}
+/* V6.13：固定搜證序列，每個角色拿到相同的卡，避免隨機抽取造成問答無前提。 */
 function allClues(){return D.clues;}
-function possible(round,category,actor,seen=state.drawn){return allClues().filter(c=>c.round===round&&!seen.includes(c.id)&&(!category||c.area===category||category==='個人'&&c.area!=='公共'&&c.area!=='密室'&&c.area!==actor));}
-function personalAvailable(round,actor,areas=[],seen=state.drawn){return allClues().filter(c=>c.round===round&&!seen.includes(c.id)&&c.area!=='公共'&&c.area!=='密室'&&c.area!==actor&&!areas.includes(c.area));}
-function drawChoice(round,actor,index,localDraws,areas,seen){
- let pool=[];
- if(round==='密室')pool=possible('密室',null,actor,seen);
- else if(round==='第一輪'){
-  pool=index===0?possible('第一輪','公共',actor,seen):personalAvailable('第一輪',actor,areas,seen);
- } else if(round==='第二輪'){
-  if(index<2)pool=possible('第二輪','公共',actor,seen);
-  else {const already=areas.length?areas:[];pool=personalAvailable('第二輪',actor,(index===4&&new Set(already).size<2)?[already[0]]:[],seen);
-   if(index>=3&&areas.length===1){const alternate=pool.filter(c=>c.area!==areas[0]);if(alternate.length)pool=alternate;}
-  }
- }
- if(!pool.length)return null;
- const c=rngPick(pool);
- return c;
+function drawChoice(round,actor,index){
+ const id=window.PAPERWIFE_FIXED_CLUES_V613?.[round]?.[actor]?.[index];
+ return D.clues.find(c=>c.id===id)||null;
 }
 function recordClue(c,owner){
  if(!c||state.drawn.includes(c.id))return;
@@ -647,20 +672,21 @@ function sharePlayerClue(id){
  if(!own)return;publicize(id);renderSidebar();message('你已將這張私人線索分享給所有角色。');
 }
 function shareNpcClues(round){
- // AI 不再把所有搜到的個人線索一次性公布。每輪只分享少量可討論的線索。
- if(state.npcSharedRounds?.includes(round))return;
- const candidates=state.owned.filter(x=>x.owner!==state.player&&D.clues.some(c=>c.id===x.id&&c.round===round&&c.area!=='公共'&&c.area!=='密室'));
- const goal=round==='第一輪'?3:round==='第二輪'?4:0;
- // 跨角色挑選，比將整批 6×配額全發出更接近實際分享。
- const picked=[],areas=new Set();
- for(const c of candidates){const clue=D.clues.find(y=>y.id===c.id);if(!areas.has(clue.area)&&picked.length<goal){picked.push(c.id);areas.add(clue.area);}}
- for(const c of candidates){if(picked.length>=goal)break;if(!picked.includes(c.id))picked.push(c.id);}
- picked.forEach(publicize);
+ if(state.npcSharedRounds?.includes(round))return 0;
+ const all=state.owned.filter(x=>x.owner!==state.player&&D.clues.some(c=>c.id===x.id&&c.round===round&&c.area!=='公共'&&c.area!=='密室'));
+ // 重點卡公開並非兇手自白：傷口、檢驗結果須與目擊證詞另行核對，不能單憑一張卡定罪。
+ const priority=round==='第一輪'?[85,74,45,68,69,50,60,2]:
+   round==='第二輪'?[43,40,24,78,67,71,39,76,63,23,27,66]:[];
+ const chosen=[];
+ const goal=round==='第一輪'?4:round==='第二輪'?7:0;
+ for(const id of priority){if(all.some(x=>x.id===id)&&!chosen.includes(id)&&chosen.length<goal)chosen.push(id);}
+ for(const c of all){if(chosen.length>=goal)break;if(!chosen.includes(c.id))chosen.push(c.id);}
+ chosen.slice(0,goal).forEach(publicize);
  state.npcSharedRounds.push(round);save();
- return picked.length;
+ return chosen.length;
 }
 function drawOne(round){const index=state.playerDraws;
- const c=drawChoice(round,state.player,index,index,state.playerAreas,state.drawn);
+ const c=drawChoice(round,state.player,index);
  if(!c){message('這個分類的提示卡已抽完，請檢查資料配置。');return;}
  recordClue(c,state.player);state.playerDraws++;
  if(c.area!=='公共'&&c.area!=='密室')state.playerAreas.push(c.area);
@@ -670,7 +696,7 @@ function autoDraw(round){const total=round==='密室'?2:round==='第一輪'?3:5;
  for(const actor of ordered.filter(n=>n!==state.player)){
   const areas=[], seen=state.drawn;
   for(let i=0;i<total;i++){
-   const c=drawChoice(round,actor,i,i,areas,seen);
+   const c=drawChoice(round,actor,i);
    if(!c)continue;
    recordClue(c,actor);num++;
    if(c.area!=='公共'&&c.area!=='密室')areas.push(c.area);
@@ -803,6 +829,7 @@ function renderSidebar(){
    const box=el('article','log-box');box.appendChild(el('div','log-role',x.who));box.appendChild(el('p','',x.text));box.appendChild(el('div','log-time',`第 ${x.act} 幕`));pane.appendChild(box);
   }
  }else{
+  if((state.investigationNotes||[]).length){pane.appendChild(el('h4','side-subtitle','物證對質後仍待核對的疑點'));for(const n of (state.investigationNotes||[])){const b=el('article','log-box');b.append(el('strong','',`第 ${n.act} 幕｜${n.title}`),el('p','',n.detail));pane.appendChild(b);}}
   const txt=el('textarea','note-input');txt.id='noteBox';txt.placeholder='記下可疑的時間、動機、誰說了什麼……';txt.value=state.notes||'';txt.addEventListener('input',()=>{state.notes=txt.value;save();});pane.appendChild(txt);pane.appendChild(el('p','empty','只儲存在目前瀏覽器，不會上傳任何伺服器。'));
  }
 }
