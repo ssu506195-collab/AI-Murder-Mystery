@@ -1,11 +1,11 @@
 'use strict';
-/* 紙妻 V6.9｜單人免 Token 劇本殺。純靜態，不使用 API；所有進度保存在本機瀏覽器。 */
+/* 紙妻 V6.14｜免 Token 劇本殺；所有進度只保存在本機瀏覽器。 */
 const D = window.PAPERWIFE_DATA;
-D.version="6.13";
+D.version="6.14";
 const V = window.PAPERWIFE_VISUALS || {portraits:{},labels:{},caseCatalog:[]};
 if (!D) throw new Error('未載入遊戲資料：請確認 data/game-data.js 已上傳。');
 const $ = id => document.getElementById(id);
-const STORE = 'paperwife_v613_fixed_save'; // 延用既有存檔；V6.2 增加公開與持有線索分離。
+const STORE = 'paperwife_v614_deduction_save'; // 延用既有存檔；V6.2 增加公開與持有線索分離。
 const ordered = D.roles;
 let state = load();
 let queue = [];
@@ -467,32 +467,38 @@ function investigateLead(lead){
 }
 /* 自己持有或真正在公開區的提示卡，才可用於向證人對質。選錯方向會耗用本幕對質配額。 */
 function availableEvidenceConfrontations(targetFilter=null){
- const all=window.PAPERWIFE_EVIDENCE_CONFRONTATIONS_V613||[];
+ const all=[...(window.PAPERWIFE_DEDUCTION_CASES_V614?.evidenceOptions||[]),...(window.PAPERWIFE_EVIDENCE_CONFRONTATIONS_V613||[])];
  const known=new Set([...(state.publicClues||[]),...(state.owned||[]).filter(x=>x.owner===state.player).map(x=>x.id)]);
  const used=new Set(state.usedEvidence||[]);
- return all.filter(x=>state.act>=x.act&&!used.has(x.id)&&x.witness!==state.player&&
+ return all.filter(x=>state.act>=x.act&&!used.has(x.id)&&(x.witness!==state.player||x.selfCheck)&&(!x.requiresUsed||x.requiresUsed.every(id=>used.has(id)))&&
   (!targetFilter||x.witness===targetFilter)&&(x.requiresAll?x.clues.every(id=>known.has(id)):x.clues.some(id=>known.has(id))) && !(x.hideIf||[]).some(id=>known.has(id)));
 }
 function investigateEvidence(x){
  if((state.evidenceCount||{})[String(state.act)]>=4){message('這一幕的物證對質次數已用完，請繼續整理已有證詞。');return;}
- const lines=[
- {who:'旁白',text:`你拿出目前已取得的線索，請${x.witness}對質。`},
- {who:state.player,text:x.q,left:state.player,right:x.witness},
- {who:x.witness,text:x.a,left:state.player,right:x.witness}
+ const isSelf=x.witness===state.player;
+ const lines=isSelf?[
+  {who:'旁白',text:'你根據自己的劇本記憶與目前取得的物證，重新整理一處矛盾。'},
+  {who:state.player,text:x.selfQuestion||x.q,left:state.player,right:''},
+  {who:'內心推理',text:x.selfAnswer||x.a,left:state.player,right:''}
+ ]:[
+  {who:'旁白',text:`你拿出目前已取得的線索，請${x.witness}對質。`},
+  {who:state.player,text:x.q,left:state.player,right:x.witness},
+  {who:x.witness,text:x.a,left:state.player,right:x.witness}
  ];
  speak(lines,()=>{
-  logLines(lines);
+  // 自我整理只存入個人推理筆記，不當成對其他角色公開的發言。
+  if(!isSelf)logLines(lines);
   (state.usedEvidence||(state.usedEvidence=[])).push(x.id);
   (state.evidenceCount||(state.evidenceCount={}))[String(state.act)]=((state.evidenceCount||{})[String(state.act)]||0)+1;
   (state.investigationNotes||(state.investigationNotes=[])).push({act:state.act,title:x.title,detail:x.check});
-  addCrosscheckLeads(x.witness,x.q,x.a);save();render();
+  if(!isSelf)addCrosscheckLeads(x.witness,x.q,x.a);save();render();
  },{auto:true,untilLast:true});
 }
 function showEvidenceOptions(targetFilter=null){
  const count=(state.evidenceCount||{})[String(state.act)]||0;
  if(count>=4)return;
  const visible=availableEvidenceConfrontations(targetFilter);
- visible.slice(0,16).forEach(x=>auxButton(`依物證對質：${x.witness}・${x.title}（${count}/4）`,()=>investigateEvidence(x)));
+ visible.slice(0,18).forEach(x=>auxButton(`${x.witness===state.player?"自行核對":"依物證對質"}：${x.witness}・${x.title}（${count}/4）`,()=>investigateEvidence(x)));
 }
 function showCrosscheckOptions(source=null){
  const available=visibleCrosscheckLeads(source);
