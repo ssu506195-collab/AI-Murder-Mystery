@@ -1,11 +1,11 @@
 'use strict';
-/* 紙妻 V6.14｜免 Token 劇本殺；所有進度只保存在本機瀏覽器。 */
+/* 紙妻 V6.17｜密室劇情、固定身分證據與逐幕調查橋接。 */
 const D = window.PAPERWIFE_DATA;
-D.version="6.14";
+D.version="6.17";
 const V = window.PAPERWIFE_VISUALS || {portraits:{},labels:{},caseCatalog:[]};
 if (!D) throw new Error('未載入遊戲資料：請確認 data/game-data.js 已上傳。');
 const $ = id => document.getElementById(id);
-const STORE = 'paperwife_v614_deduction_save'; // 延用既有存檔；V6.2 增加公開與持有線索分離。
+const STORE = 'paperwife_v617_chamber_identity_save'; // 新版重排身份關鍵卡片，請從新局開始。
 const ordered = D.roles;
 let state = load();
 let queue = [];
@@ -135,7 +135,28 @@ function beginPrologue(){
 }
 
 function newState(){return {player:null,act:1,phase:'start',castIndex:0,publicDoneActs:[],readActs:[],interviewed:[],interviewTarget:null,questionPath:[],publicLog:[],drawn:[],owned:[],publicClues:[],npcSharedRounds:[],latestNpcPublicIds:[],latestNpcRound:'',searchStage:null,playerDraws:0,playerAreas:[],aiDrawsDone:false,notes:'',usedEvidence:[],evidenceCount:{},investigationNotes:[],solutions:{},votes:{},result:null,complete:false};}
-function load(){try{const s=JSON.parse(localStorage.getItem(STORE));if(s && typeof s==='object' && (s.phase==='start'||ordered.includes(s.player)) && Number.isInteger(s.act)&&s.act>=1&&s.act<=4)return {...newState(),...s,publicClues:Array.isArray(s.publicClues)?s.publicClues:[],npcSharedRounds:Array.isArray(s.npcSharedRounds)?s.npcSharedRounds:[],latestNpcPublicIds:Array.isArray(s.latestNpcPublicIds)?s.latestNpcPublicIds:[],publicDoneActs:Array.isArray(s.publicDoneActs)?s.publicDoneActs:[]};}catch{}return newState();}
+/* 保留現有存檔，也修正已經發生的公開詢問紀錄中的失憶式台詞。只匹配有角色與對象標記的正式公開盤問，不觸碰玩家自己選過的問題。 */
+function migratePublicTranscriptV615(saved){
+ if(!Array.isArray(saved.publicLog))return false;
+ const all=window.PAPERWIFE_PUBLIC_DIALOGUE_V615||{};
+ let changed=false;
+ for(let i=0;i<saved.publicLog.length-4;i++){
+  const lead=saved.publicLog[i];
+  if(lead?.who!=='旁白')continue;
+  const m=String(lead.text||'').match(/^公開詢問 \d+／\d+：(.+?) 決定向 (.+?) 追問。$/);
+  if(!m)continue;
+  const asker=m[1],target=m[2],turn=all[String(lead.act)]?.[asker]?.[target];
+  if(!turn)continue;
+  const four=saved.publicLog.slice(i+1,i+5);
+  if(four.length!==4||four[0]?.who!==asker||four[1]?.who!==target||four[2]?.who!==asker||four[3]?.who!==target)continue;
+  for(const [j,key] of ['q','a','follow','reply'].entries()){
+   if(four[j].text!==turn[key]){four[j].text=turn[key];changed=true;}
+  }
+ }
+ return changed;
+}
+function load(){try{const s=JSON.parse(localStorage.getItem(STORE));
+ if(s && migratePublicTranscriptV615(s))localStorage.setItem(STORE,JSON.stringify(s));if(s && typeof s==='object' && (s.phase==='start'||ordered.includes(s.player)) && Number.isInteger(s.act)&&s.act>=1&&s.act<=4)return {...newState(),...s,publicClues:Array.isArray(s.publicClues)?s.publicClues:[],npcSharedRounds:Array.isArray(s.npcSharedRounds)?s.npcSharedRounds:[],latestNpcPublicIds:Array.isArray(s.latestNpcPublicIds)?s.latestNpcPublicIds:[],publicDoneActs:Array.isArray(s.publicDoneActs)?s.publicDoneActs:[]};}catch{}return newState();}
 function save(){localStorage.setItem(STORE,JSON.stringify(state));}
 function setPhase(phase){state.phase=phase;save();render();}
 function el(tag,cls,txt){const x=document.createElement(tag);if(cls)x.className=cls;if(txt!==undefined)x.textContent=txt;return x;}
@@ -344,8 +365,8 @@ $('theaterReader').addEventListener('click',()=>openReader(false));
 $('closeReader').addEventListener('click',()=>{if(readerAfter){message('請先完成本幕劇本閱讀，再進行下一階段。');return;}$('readerOverlay').hidden=true;});
 $('readerDone').addEventListener('click',()=>{const cb=readerAfter;readerAfter=null;if(cb)cb();});
 function renderRead(){setHeader(`第 ${state.act} 幕`,state.act===1?'你的故事開始・第一幕':'閱讀本幕角色劇本',`本幕只會顯示 ${state.player} 的角色劇本，不會開放未解鎖內容。`);option('開啟本幕劇本',()=>openReader(true),{primary:true});}
-function renderRitual(){showPortraits();if(state.act===1){setHeader('第一幕 · 小劇場','孔神婆主持婚禮沖喜儀式','此段會切換到婚房儀式場景。神婆附身、眾人的反應，以及惠雯突然現身，都是後續推理的重要資訊。每按一次只播放一句。');option('開始孔神婆儀式',()=>speak(D.ritual.map((line,i)=>line.who==='孔神婆'?{...line,left:'孔神婆',right:'',portrait:(i>=3?'附身的孔神婆':'孔神婆')}: {...line,left:'',right:''}),()=>{state.act=2;state.interviewed=[];state.interviewTarget=null;state.questionPath=[];setPhase('read');openReader(true);}),{primary:true});}
- else {setHeader('第三幕 · 小劇場','黑暗中的密室','昏暗的密室深處，古老機關與離奇屍塊正等待你們調查。之後將進入密室搜證與推理。');option('進入密室劇場',()=>speak(D.haunt,()=>{state.playerDraws=0;state.playerAreas=[];state.aiDrawsDone=false;setPhase('searchSecret');}),{primary:true});}}
+function renderRitual(){showPortraits();if(state.act===1){setHeader('第一幕 · 小劇場','孔神婆主持婚禮沖喜儀式','此段會切換到婚房儀式場景。神婆附身、眾人的反應，以及惠雯突然現身，都是後續推理的重要資訊。每按一次只播放一句。');option('開始孔神婆儀式',()=>speak(D.ritual.map((line,i)=>line.who==='孔神婆'?{...line,left:'孔神婆',right:'',portrait:(i>=3?'附身的孔神婆':'孔神婆')}: {...line,left:ordered.includes(line.who)?line.who:'',right:''}),()=>{state.act=2;state.interviewed=[];state.interviewTarget=null;state.questionPath=[];setPhase('read');openReader(true);}),{primary:true});}
+ else {setHeader('第三幕 · 小劇場','暗道深處的密室','先經歷復活惠雯的驚悚場面，再調查舊姨太太及新近死者留下的物件。此處不是直接公布惠雯命案真兇的關卡。');option('進入密室劇場',()=>speak(D.chamberOpening||D.haunt,()=>{state.playerDraws=0;state.playerAreas=[];state.aiDrawsDone=false;setPhase('searchSecret');}),{primary:true});}}
 
 const PLAYER_CHALLENGE_OVERRIDES={
  '1':{
@@ -570,11 +591,23 @@ function renderInterviewTree(){const target=state.interviewTarget;const path=sta
   if(!publicBlood)dialogue.q='有人懷疑你深夜單獨接觸惠雯。除了觀察病情，你當時到底去了哪裡？';
  }
  dialogue.a=guardSecretReply(target,state.act,dialogue.q,dialogue.a);
+ // V6.16：問句不得在角色私有資訊未公開時直接引用既定傷口／時間。
+ // 先將問題改成向本人查證，再以實際持有／公開的卡片作為細問前提。
+ if(layer===0){
+   const known=new Set([...(state.publicClues||[]),...(state.owned||[]).filter(x=>x.owner===state.player).map(x=>x.id)]);
+   const gate=window.PAPERWIFE_V616_GATE?.[String(state.act)]?.[target]?.[i];
+   const transcript=(state.publicLog||[]).map(x=>x.text).join(' ');
+   if(gate&&!gate.clues.some(id=>known.has(id))&&!(gate.known?.test(transcript))){dialogue.q=gate.fallback;}
+   const specific=window.PAPERWIFE_V616_ROLE_MAIN?.[state.player]?.[String(state.act)]?.[target]?.[i];
+   if(specific)dialogue.q=specific;
+ }
+ const origin=layer===0?(window.PAPERWIFE_V616_Q_SOURCES?.[String(state.act)]?.[target]?.[i]||'先請本人說明，之後再核對'):
+  (layer===1?'依據上一段回答繼續追問':'根據先前回答核對細節');
  option(dialogue.q,()=>{
   const line=[{who:state.player,text:dialogue.q,left:state.player,right:target},{who:target,text:dialogue.a,left:state.player,right:target}];
   // 每一條主問題與第一層追問均有專屬詳述，不再附加重複的制式補充。
   state.questionPath.push(i);save();speak(line,()=>{logLines(line);addCrosscheckLeads(target,dialogue.q,dialogue.a);render();},{auto:true,untilLast:true});
- });});
+ },{sub:`提問依據：${origin}`});});
  showCrosscheckOptions(target);showEvidenceOptions(target);
 }
 function buildPublicDebates(){
@@ -590,10 +623,12 @@ function buildPublicDebates(){
    const count=used.get(target)||0; used.set(target,count+1);
    const scene=(topics[target]||[])[Math.min(count,1)]; if(!scene)continue;
    let [q,a,follow,reply]=scene;
+   let clueSpecificDiscussion=false;
    const matched=clues.filter(c=>clueTalk[c.id]?.[0]===target);
    if(count===1&&matched.length && state.act>=3){
     const c=matched[(i+state.act)%matched.length], answer=clueTalk[c.id];
     [q,a,follow,reply]=answer.slice(1);
+    clueSpecificDiscussion=true;
     q=`公開的第 ${c.id} 號提示卡記載「${c.text.replace(/\s+/g,' ').slice(0,120)}${c.text.length>120?'……':''}」。${q}`;
    }
    // Public discussion is spoken by an NPC, not the user: keep character names as third-person.
@@ -602,6 +637,24 @@ function buildPublicDebates(){
    follow=sourceAwareQuestion(follow,asker,target,state.act,1,a);
    q=roleSensitiveQuestion(q,asker,target);
    follow=roleSensitiveQuestion(follow,asker,target);
+   // 有親身共同經歷的角色，不可只靠字串取代姓名來造句：使用經過審核的雙人證詞。
+   const turnMap=window.PAPERWIFE_PUBLIC_DIALOGUE_V615?.[String(state.act)]||{};
+   const speakerDialogue=clueSpecificDiscussion?null:(turnMap[asker]?.[target]||turnMap.default?.[target]);
+   if(speakerDialogue){
+     q=speakerDialogue.q;
+     a=speakerDialogue.a;
+     follow=speakerDialogue.follow;
+     reply=speakerDialogue.reply;
+   }
+   // 自己取得但未公開的保存工具卡不能被其他 NPC 當成已公開證據使用。
+   if(state.act===3&&target==='東青'&&count===0 && !(state.publicClues||[]).includes(76)){
+     [q,a,follow,reply]=[
+       '地下密室裡有保存多年舊屍的痕跡。身為管家，你知不知道誰能進出那片封閉空間？',
+       '我知道宅裡有不少上鎖的舊房和被封的通道。誰真的進去過、做過什麼，不能只聽我一面之詞。',
+       '那麼該從哪些門鎖與出入紀錄查證？昨夜有人離開大門，你能提供完整記錄嗎？',
+       '門鎖有鑰匙也可能被撬動。我願意把自己的職責交代清楚，但夜裡每個人的行蹤得請本人來說。'
+     ];
+   }
    a=guardSecretReply(target,state.act,q,a);
    reply=guardSecretReply(target,state.act,follow,reply);
    result.push({asker,target,q,a,follow,reply});
@@ -682,9 +735,9 @@ function shareNpcClues(round){
  const all=state.owned.filter(x=>x.owner!==state.player&&D.clues.some(c=>c.id===x.id&&c.round===round&&c.area!=='公共'&&c.area!=='密室'));
  // 重點卡公開並非兇手自白：傷口、檢驗結果須與目擊證詞另行核對，不能單憑一張卡定罪。
  const priority=round==='第一輪'?[85,74,45,68,69,50,60,2]:
-   round==='第二輪'?[43,40,24,78,67,71,39,76,63,23,27,66]:[];
+   round==='第二輪'?[61,59,76,66,43,40,24,78,71,67,39,23,27]:[];
  const chosen=[];
- const goal=round==='第一輪'?4:round==='第二輪'?7:0;
+ const goal=round==='第一輪'?4:round==='第二輪'?9:0;
  for(const id of priority){if(all.some(x=>x.id===id)&&!chosen.includes(id)&&chosen.length<goal)chosen.push(id);}
  for(const c of all){if(chosen.length>=goal)break;if(!chosen.includes(c.id))chosen.push(c.id);}
  chosen.slice(0,goal).forEach(publicize);
@@ -755,14 +808,53 @@ function renderSearch(round){
  grid.append(left,right);opts.append(grid);
 }
 
-function renderSolveSecret(){setHeader('第三幕 · 密室推理','四具屍體，誰是最後一人？','密室中的十四條線索可指向四具不同的屍體；回想孔神婆先前附身時的話。');
+function renderSolveSecret(){
+ setHeader('第三幕 · 密室推理','舊姨太太之外，第四名死者是誰？','請把十四條密室線索合併：碧雲、卿卿、憐兒的舊物與新近的斷肢，是否來自同一個年代？留意神婆附身時的三段話。');
  for(const answer of ['孔神婆','惠雯','秋萍','孟小婉'])option(answer,()=>{
-  if(answer==='孔神婆'){state.solutions.secret=true;state.playerDraws=0;state.playerAreas=[];state.aiDrawsDone=false;setPhase('search2');}
-  else message('再想想孔神婆儀式裡提到的碧雲、卿卿、憐兒，以及另一位死者。');
+  if(answer==='孔神婆'){
+   state.solutions.secret=true;save();
+   const lines=D.chamberAfterSolve||[];
+   speak(lines,()=>{
+    if(lines.length)logLines(lines);
+    state.playerDraws=0;state.playerAreas=[];state.aiDrawsDone=false;setPhase('search2');
+   });
+  } else message('請先把碧雲、卿卿、憐兒的線索各自分組，再比較新鮮斷肢與儀式人物的隨身物件。');
  });
+ auxButton('再看密室搜證提示',()=>message('重點是死者的年代、隨身物品與新舊痕跡，不是從屍塊直接猜惠雯兇手。'));
 }
-function renderIdentity(){setHeader('第三幕 · 身分推理','誰頂替了陳宅主人？','第三幕的證據已逐漸指向陳宅主人的祕密。請比對人物證詞與照片，找出他的真實身分。');
- for(const x of ['現任陳聿明其實是駱午陽','東青其實是陳聿明','戴思齊其實是陳聿明','阿忠其實是孔神婆'])option(x,()=>{if(x.startsWith('現任陳聿明')){state.solutions.identity=true;setPhase('public');}else message('請再比對黃埔軍校照片、手腕特徵和舊火災。');});
+function identityKnownClues(){
+ const known=new Set([...(state.publicClues||[]),...(state.owned||[]).filter(x=>x.owner===state.player).map(x=>x.id)]);
+ return known;
+}
+function renderIdentity(){
+ const known=identityKnownClues();
+ if(!state.solutions.identityBriefingSeen){
+  setHeader('第三幕 · 身分調查','比對大火、舊照與人物證詞','密室裡的屍體不會直接告訴你駱午陽是誰。先把第二輪取得的軍校照片和玉佩等線索整理成可檢驗的推論。');
+  option('聽取本輪身分線索核對',()=>{
+   const lines=(D.identityBriefing||[]).filter(x=>{
+    if(x.text.includes('魚形玉佩'))return known.has(59)&&known.has(66);
+    return !x.text.includes('黃埔軍校舊照')||known.has(61);
+   });
+   speak(lines,()=>{
+    // 身分核對屬於玩家自己的證據整理；若使用了尚未分享的私人卡，不可自動記成公開證詞。
+    state.solutions.identityBriefingSeen=true;save();render();
+   });
+  },{primary:true});
+  auxButton('開啟公開情報與已取得線索',()=>openRecordPanel('clues'));
+  return;
+ }
+ setHeader('第三幕 · 身分推理','現任陳老爺是否為大火前的原主人？','根據已公開的軍校照片、手腕痣及三年前大火後的人事變化，選出最有根據的身分推論。這題不要求提前知道冒名者的真名。');
+ const choices=[
+  ['有證據顯示現任老爺可能是冒名者，真正原主人的去向仍待查',true,'照片男子與現任老爺手腕痣吻合，但面容不同；火災後舊僕被遣散，值得繼續追查。'],
+  ['現任老爺必定是原主人，因為他一直住在陳宅',false,'長期住在宅內只能證明他掌握這個身分，不能排除冒名。'],
+  ['軍校照片只是陌生客人的遺物，與現任老爺沒有關係',false,'照片人物手腕的痣與現任老爺吻合，不能直接當成無關物品。'],
+  ['現在只能認定有人藏匿舊屍，陳老爺身分不需要再查',false,'密室舊屍案和老爺冒名疑點是兩件事，不能拿前者替後者下結論。']
+ ];
+ for(const [label,correct,hint] of choices)option(label,()=>{
+  if(correct){state.solutions.identity=true;(state.investigationNotes||(state.investigationNotes=[])).push({act:3,title:'身分查證',detail:'現任老爺可能在三年前大火前後換了身分；軍校照和遣散舊僕支持這個推論。但他的真名、原主人去向及惠雯死因仍須另外求證。'});save();setPhase('public');}
+  else message(hint);
+ });
+ auxButton('查看線索：照片、玉佩與證詞',()=>openRecordPanel('clues'));
 }
 function renderVote(){setHeader('第四幕 · 最終抉擇','投出你認為的兇手','請按順序作出選擇：殺害惠雯的兇手、是否認為自己感染、是否服用娃娃眼，以及保留或銷毀《陳氏古法》。');
  const questions=[
